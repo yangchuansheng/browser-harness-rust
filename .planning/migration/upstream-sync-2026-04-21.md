@@ -59,3 +59,18 @@
 - `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` exposed the new runner commands through the facade.
 - `git diff --check` passed.
 - Secret/local-path scans found no API keys, pinned local websocket, or local home path leaks in tracked/unignored files.
+
+## Re-Audit — 2026-05-14
+
+- Re-fetched `upstream/main`; target remains `2f22ed6709748edc5eab733eae099802640a78e2`.
+- Recounted commit range `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..upstream/main`: 239 commits.
+- Cross-checked upstream domain-skill entries from both `agent-workspace/domain-skills/` and legacy `domain-skills/` paths against this fork's `domains/` mapping.
+- Initial re-audit found two missing legacy Amazon domain-skill files from upstream commit `17e88b4`: `domain-skills/amazon/cart.md` and `domain-skills/amazon/orders.md`.
+- Fixed by adding Rust-layout equivalents at `domains/amazon/cart.md` and `domains/amazon/orders.md`; helper examples use text fences and path references follow the local `domains/` convention.
+- Post-fix domain mapping result: 109 upstream domain-skill entries / 109 local mapped files present.
+
+## Re-Audit Verification Evidence
+
+- `git fetch upstream main` confirmed target `2f22ed6709748edc5eab733eae099802640a78e2`.
+- Domain mapping script reported `upstream domain file entries 109` and `missing mapped files 0`.
+- Re-ran Rust formatting, check, tests, CLI smoke, diff whitespace check, and secret/local-path scans after the Amazon fix. The repository `scripts/scan_sensitive.sh` requires Bash 4 `mapfile`; macOS `/bin/bash` is 3.2 in this worktree, so an equivalent Python/rg scan was used for the final secret/local-path pass.
