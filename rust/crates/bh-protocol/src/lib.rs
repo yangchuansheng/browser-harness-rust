@@ -4,6 +4,8 @@ use serde_json::Value;
 pub const PROTOCOL_VERSION: u32 = 1;
 
 pub const META_DRAIN_EVENTS: &str = "drain_events";
+pub const META_PING: &str = "ping";
+pub const META_CONNECTION_STATUS: &str = "connection_status";
 pub const META_SESSION: &str = "session";
 pub const META_SET_SESSION: &str = "set_session";
 pub const META_PENDING_DIALOG: &str = "pending_dialog";
@@ -30,6 +32,9 @@ pub const META_MOUSE_MOVE: &str = "mouse_move";
 pub const META_MOUSE_DOWN: &str = "mouse_down";
 pub const META_MOUSE_UP: &str = "mouse_up";
 pub const META_TYPE_TEXT: &str = "type_text";
+pub const META_WAIT_FOR_ELEMENT: &str = "wait_for_element";
+pub const META_FILL_INPUT: &str = "fill_input";
+pub const META_WAIT_FOR_NETWORK_IDLE: &str = "wait_for_network_idle";
 pub const META_PRESS_KEY: &str = "press_key";
 pub const META_DISPATCH_KEY: &str = "dispatch_key";
 pub const META_SCROLL: &str = "scroll";
@@ -43,6 +48,8 @@ pub struct DaemonRequest {
     pub params: Option<Value>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub session_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_id: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub meta: Option<String>,
 }

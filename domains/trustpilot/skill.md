@@ -14,7 +14,7 @@ metadata, all 20 reviews for the current page, pagination info, and rating distr
 
 ```text
 import re, json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def get_trustpilot_page(domain, page=1, stars=None, languages='en', verified=False):
     """
@@ -136,7 +136,7 @@ This cap applies per filter combination, so `stars=1` gives 200 reviews, `stars=
 
 ```text
 import re, json, time
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def collect_reviews(domain, stars=None, languages='en', max_pages=10, delay=0.5):
     """
@@ -298,7 +298,7 @@ Consumer API, so if you have an API key, you can use it directly without a separ
 
 ```text
 import re, json, time
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def scrape_trustpilot(domain, max_unique=200):
     """

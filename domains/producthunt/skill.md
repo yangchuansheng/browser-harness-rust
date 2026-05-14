@@ -3,19 +3,6 @@
 Field-tested against https://www.producthunt.com on 2026-04-18.
 All selectors verified with actual browser runs.
 
-## Rust-native path
-
-Use the Product Hunt homepage guest for the browser workflow below. This
-assumes a live browser daemon is already attached:
-
-```bash
-cd rust
-cargo +stable build --release --target wasm32-unknown-unknown --manifest-path guests/rust-producthunt-homepage/Cargo.toml
-cargo run --quiet --bin bhrun -- run-guest guests/rust-producthunt-homepage/target/wasm32-unknown-unknown/release/rust_producthunt_homepage_guest.wasm <<'JSON'
-{"daemon_name":"default","guest_module":"guests/rust-producthunt-homepage/target/wasm32-unknown-unknown/release/rust_producthunt_homepage_guest.wasm","granted_operations":["new_tab","wait_for_load","wait","page_info","js"],"allow_http":false,"allow_raw_cdp":false,"persistent_guest_state":true}
-JSON
-```
-
 ---
 
 ## Page Structure Overview
@@ -29,20 +16,14 @@ Product Hunt is a React SPA. Key structural facts discovered:
 - **4 homepage sections**: today, yesterday, last week, last month (5 products each, plus "see all")
 - **Today's votes are hidden** for the first 4 hours of each day (`—` instead of count)
 - **Homepage has 30 fixed post-items** — scrolling does NOT load more
-- **`goto()` may return `ERR_ABORTED`** for producthunt.com in some browser sessions — use `new_tab()` instead
+- **`goto_url()` may return `ERR_ABORTED`** for producthunt.com in some browser sessions — use `new_tab()` instead
 
 ---
 
 ## Navigation Pattern
 
-Examples below use helper-style operations such as `http_get()`, `goto()`, `new_tab()`, `page_info()`, `wait()`, and `js()`. Map them to `browser-harness`, `bhrun`, or a guest as needed:
-
 ```text
-# helper-style example: map these calls to browser-harness / bhrun or a guest
-```
-
-```text
-# goto() may fail on Product Hunt — use new_tab() reliably
+# goto_url() may fail on Product Hunt — use new_tab() reliably
 tid = new_tab("https://www.producthunt.com")
 wait(4)  # React SPA needs time; wait_for_load() alone is insufficient
 page = page_info()
@@ -272,7 +253,7 @@ JSON.stringify(
 
 1. **`innerText` returns `None` on complex elements** — use `outerText` or break into simple single-property expressions. Avoid chaining DOM traversal inside `JSON.stringify()` on large objects.
 
-2. **`goto()` returns `ERR_ABORTED`** for producthunt.com in some browser sessions — always use `new_tab("url")` instead.
+2. **`goto_url()` returns `ERR_ABORTED`** for producthunt.com in some browser sessions — always use `new_tab("url")` instead.
 
 3. **`a[href^="/posts/"]` matches nothing** — Product Hunt uses `/products/` for product URLs, not `/posts/`.
 

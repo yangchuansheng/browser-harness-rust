@@ -19,7 +19,7 @@ Zillow search pages embed all listing data in `<script id="__NEXT_DATA__">`. Thi
 
 ```text
 import re, json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -120,7 +120,7 @@ max_pages = (total + 40) // 41
 
 ```text
 import re, json, time
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -260,7 +260,7 @@ Each Redfin search results page embeds one `<script type="application/ld+json">`
 
 ```text
 import re, json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -306,7 +306,7 @@ Redfin's internal GIS/search API returns rich structured data including price, M
 
 ```text
 import json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def redfin_search(region_id, region_type=6, num_homes=20, page=1, uipt="1,2,3,4,5,6"):
     """

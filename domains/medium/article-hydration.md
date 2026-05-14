@@ -32,11 +32,8 @@ Safe pattern: take the extracted markdown, then drop leading paragraphs that are
 
 ## Extractor
 
-This example is written in helper-style operations. Map them to `browser-harness`, `bhrun`, or a guest as needed.
-
-````text
-# helper-style example: map these calls to browser-harness / bhrun or a guest
-
+````bash
+browser-harness <<'PY'
 new_tab("https://medium.com/@user/slug-abc123")
 wait_for_load()
 wait(2.0)  # Medium hydrates more UI after readyState=complete
@@ -89,6 +86,7 @@ while paras and len(paras[0]) < 12:
     paras.pop(0)
 md = '\n\n'.join(paras)
 print(md)
+PY
 ````
 
 The `seen` set avoids double-emitting when an `<li>` matches the block query inside its `<ul>`.

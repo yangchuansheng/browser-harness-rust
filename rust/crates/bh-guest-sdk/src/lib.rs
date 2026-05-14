@@ -2,8 +2,9 @@ use std::collections::BTreeMap;
 use std::fmt;
 
 pub use bh_wasm_host::{
-    CookieParam, CookieRecord, CurrentSessionResult, EventFilter, HttpGetRequest, NewTabResult,
-    SwitchTabResult, TabSummary, WaitForEventResult, WaitResult, WatchEventsLine,
+    CookieParam, CookieRecord, CurrentSessionResult, EventFilter, FillInputRequest, HttpGetRequest,
+    NewTabResult, SwitchTabResult, TabSummary, WaitForElementRequest, WaitForEventResult,
+    WaitForNetworkIdleRequest, WaitResult, WatchEventsLine,
 };
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -219,6 +220,44 @@ pub fn type_text(text: &str) -> Result<(), GuestError> {
     )
 }
 
+pub fn wait_for_element(selector: &str, timeout: f64, visible: bool) -> Result<bool, GuestError> {
+    call_json(
+        "wait_for_element",
+        &json!({
+            "selector": selector,
+            "timeout": timeout,
+            "visible": visible,
+        }),
+    )
+}
+
+pub fn fill_input(
+    selector: &str,
+    text: &str,
+    clear_first: bool,
+    timeout: f64,
+) -> Result<(), GuestError> {
+    call_json(
+        "fill_input",
+        &json!({
+            "selector": selector,
+            "text": text,
+            "clear_first": clear_first,
+            "timeout": timeout,
+        }),
+    )
+}
+
+pub fn wait_for_network_idle(timeout: f64, idle_ms: u64) -> Result<bool, GuestError> {
+    call_json(
+        "wait_for_network_idle",
+        &json!({
+            "timeout": timeout,
+            "idle_ms": idle_ms,
+        }),
+    )
+}
+
 pub fn press_key(key: &str, modifiers: i64) -> Result<(), GuestError> {
     call_json(
         "press_key",
@@ -279,10 +318,15 @@ pub fn print_pdf(landscape: bool) -> Result<String, GuestError> {
 }
 
 pub fn screenshot(full: bool) -> Result<String, GuestError> {
+    screenshot_with_max_dim(full, None)
+}
+
+pub fn screenshot_with_max_dim(full: bool, max_dim: Option<u32>) -> Result<String, GuestError> {
     call_json(
         "screenshot",
         &json!({
             "full": full,
+            "max_dim": max_dim,
         }),
     )
 }
@@ -878,6 +922,66 @@ mod tests {
         .expect("type text result");
         assert_eq!(type_result, ());
 
+        let wait_for_element_result: bool = call_json_with(
+            |operation, request, output| {
+                assert_eq!(operation, b"wait_for_element");
+                let request: Value = serde_json::from_slice(request).expect("parse request");
+                assert_eq!(
+                    request.get("selector").and_then(Value::as_str),
+                    Some("#search")
+                );
+                assert_eq!(request.get("timeout").and_then(Value::as_f64), Some(3.0));
+                assert_eq!(request.get("visible").and_then(Value::as_bool), Some(true));
+                let response = serde_json::to_vec(&json!(true)).expect("serialize");
+                output[..response.len()].copy_from_slice(&response);
+                response.len() as i32
+            },
+            "wait_for_element",
+            &json!({"selector":"#search","timeout":3.0,"visible":true}),
+        )
+        .expect("wait for element result");
+        assert!(wait_for_element_result);
+
+        let fill_input_result: () = call_json_with(
+            |operation, request, output| {
+                assert_eq!(operation, b"fill_input");
+                let request: Value = serde_json::from_slice(request).expect("parse request");
+                assert_eq!(
+                    request.get("selector").and_then(Value::as_str),
+                    Some("#search")
+                );
+                assert_eq!(request.get("text").and_then(Value::as_str), Some("hello"));
+                assert_eq!(
+                    request.get("clear_first").and_then(Value::as_bool),
+                    Some(true)
+                );
+                assert_eq!(request.get("timeout").and_then(Value::as_f64), Some(2.0));
+                let response = serde_json::to_vec(&Value::Null).expect("serialize");
+                output[..response.len()].copy_from_slice(&response);
+                response.len() as i32
+            },
+            "fill_input",
+            &json!({"selector":"#search","text":"hello","clear_first":true,"timeout":2.0}),
+        )
+        .expect("fill input result");
+        assert_eq!(fill_input_result, ());
+
+        let network_idle_result: bool = call_json_with(
+            |operation, request, output| {
+                assert_eq!(operation, b"wait_for_network_idle");
+                let request: Value = serde_json::from_slice(request).expect("parse request");
+                assert_eq!(request.get("timeout").and_then(Value::as_f64), Some(5.0));
+                assert_eq!(request.get("idle_ms").and_then(Value::as_u64), Some(250));
+                let response = serde_json::to_vec(&json!(true)).expect("serialize");
+                output[..response.len()].copy_from_slice(&response);
+                response.len() as i32
+            },
+            "wait_for_network_idle",
+            &json!({"timeout":5.0,"idle_ms":250}),
+        )
+        .expect("wait network idle result");
+        assert!(network_idle_result);
+
         let press_result: () = call_json_with(
             |operation, request, output| {
                 assert_eq!(operation, b"press_key");
@@ -977,12 +1081,13 @@ mod tests {
                 assert_eq!(operation, b"screenshot");
                 let request: Value = serde_json::from_slice(request).expect("parse request");
                 assert_eq!(request.get("full").and_then(Value::as_bool), Some(true));
+                assert_eq!(request.get("max_dim").and_then(Value::as_u64), Some(1200));
                 let response = serde_json::to_vec("cG5nLWJ5dGVz").expect("serialize");
                 output[..response.len()].copy_from_slice(&response);
                 response.len() as i32
             },
             "screenshot",
-            &json!({"full":true}),
+            &json!({"full":true,"max_dim":1200}),
         )
         .expect("screenshot result");
         assert_eq!(screenshot_result, "cG5nLWJ5dGVz");

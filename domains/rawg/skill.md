@@ -34,7 +34,7 @@ Confirmed working on all tested game pages.
 
 ```text
 import json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def extract_game(slug):
     """
@@ -204,7 +204,7 @@ All endpoints live at `https://api.rawg.io/api/`. Append `&key=YOUR_API_KEY` to 
 
 ```text
 import json, os
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 KEY = os.environ['RAWG_API_KEY']
 

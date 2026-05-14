@@ -10,6 +10,8 @@ Prefer DOM/JS selection if you can target the `<select>` directly.
 
 Use typed input primitives:
 
+- `wait-for-element` for late-rendered menus or combobox inputs
+- `fill-input` for framework-managed text fields that need input/change events
 - `click`
 - `type_text`
 - `press_key`

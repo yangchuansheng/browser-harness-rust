@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 use std::fs::{self, File};
-use std::io::{ErrorKind, Read, Write};
+use std::io::{Cursor, ErrorKind, Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;
 use std::sync::Arc;
@@ -10,10 +10,10 @@ use std::time::Duration;
 use bh_cdp::{is_browser_level_method, CdpClient, CdpEvent};
 use bh_discovery::{get_ws_url, is_internal_url, runtime_paths, RuntimePaths};
 use bh_protocol::{
-    DaemonRequest, DaemonResponse, META_CLICK, META_CONFIGURE_DOWNLOADS, META_CURRENT_TAB,
-    META_DISPATCH_KEY, META_DRAIN_EVENTS, META_ENSURE_REAL_TAB, META_GET_COOKIES, META_GOTO,
-    META_HANDLE_DIALOG, META_IFRAME_TARGET, META_JS, META_LIST_TABS, META_MOUSE_DOWN,
-    META_MOUSE_MOVE, META_MOUSE_UP, META_NEW_TAB, META_PAGE_INFO, META_PENDING_DIALOG,
+    DaemonRequest, DaemonResponse, META_CLICK, META_CONFIGURE_DOWNLOADS, META_CONNECTION_STATUS,
+    META_CURRENT_TAB, META_DISPATCH_KEY, META_DRAIN_EVENTS, META_ENSURE_REAL_TAB, META_GET_COOKIES,
+    META_GOTO, META_HANDLE_DIALOG, META_IFRAME_TARGET, META_JS, META_LIST_TABS, META_MOUSE_DOWN,
+    META_MOUSE_MOVE, META_MOUSE_UP, META_NEW_TAB, META_PAGE_INFO, META_PENDING_DIALOG, META_PING,
     META_PRESS_KEY, META_PRINT_PDF, META_SCREENSHOT, META_SCROLL, META_SESSION, META_SET_COOKIES,
     META_SET_SESSION, META_SET_VIEWPORT, META_SHUTDOWN, META_SWITCH_TAB, META_TYPE_TEXT,
     META_UPLOAD_FILE, META_WAIT_FOR_LOAD,
@@ -27,7 +27,7 @@ use tokio::time::{sleep, Instant};
 
 pub const DEFAULT_EVENT_CAPACITY: usize = 500;
 const MARK_JS: &str =
-    "const m=String.fromCodePoint(0x1F7E2);if(!document.title.startsWith(m))document.title=m+' '+document.title";
+    "const m=String.fromCodePoint(0x1F434);if(!document.title.startsWith(m))document.title=m+' '+document.title";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DaemonConfig {
@@ -202,7 +202,7 @@ impl Daemon {
             .send_raw(
                 "Runtime.evaluate",
                 json!({
-                    "expression": "if(document.title.startsWith('\\u{1F7E2} '))document.title=document.title.slice(2)"
+                    "expression": "const m=String.fromCodePoint(0x1F434)+' ';if(document.title.startsWith(m))document.title=document.title.slice(m.length)"
                 }),
                 Some(session_id),
             )
@@ -296,19 +296,52 @@ impl Daemon {
     }
 
     async fn current_tab_result(&self) -> Result<Value, String> {
-        let info = if let Some(target_id) = self.current_target().await {
-            self.cdp
-                .send_raw("Target.getTargetInfo", json!({"targetId": target_id}), None)
-                .await?
-        } else {
-            self.cdp
-                .send_raw("Target.getTargetInfo", json!({}), None)
-                .await?
-        };
+        let target_id = self
+            .current_target()
+            .await
+            .ok_or_else(|| "not_attached".to_string())?;
+        let info = self
+            .cdp
+            .send_raw("Target.getTargetInfo", json!({"targetId": target_id}), None)
+            .await?;
         let target = info
             .get("targetInfo")
             .ok_or_else(|| "Target.getTargetInfo missing targetInfo".to_string())?;
         Ok(Value::Object(tab_summary(target)))
+    }
+
+    async fn connection_status_result(&self) -> Result<Value, String> {
+        let target_id = self
+            .current_target()
+            .await
+            .ok_or_else(|| "not_attached".to_string())?;
+        let info = self
+            .cdp
+            .send_raw("Target.getTargetInfo", json!({"targetId": target_id}), None)
+            .await
+            .map_err(|_| "cdp_disconnected".to_string())?;
+        let target = info
+            .get("targetInfo")
+            .ok_or_else(|| "Target.getTargetInfo missing targetInfo".to_string())?;
+        let page = if is_real_page(target) {
+            let mut summary = tab_summary(target);
+            if summary
+                .get("title")
+                .and_then(Value::as_str)
+                .unwrap_or("")
+                .is_empty()
+            {
+                summary.insert("title".to_string(), Value::String("(untitled)".to_string()));
+            }
+            Value::Object(summary)
+        } else {
+            Value::Null
+        };
+        Ok(json!({
+            "target_id": target_id,
+            "session_id": self.current_session().await,
+            "page": page,
+        }))
     }
 
     async fn page_info_result(&self) -> Result<Value, String> {
@@ -669,7 +702,7 @@ impl Daemon {
         Ok(Value::Null)
     }
 
-    async fn screenshot_result(&self, full: bool) -> Result<Value, String> {
+    async fn screenshot_result(&self, full: bool, max_dim: Option<u32>) -> Result<Value, String> {
         let session_id = self.ensure_session().await?;
         let result = self
             .send_with_retry(
@@ -685,6 +718,9 @@ impl Daemon {
             .get("data")
             .and_then(Value::as_str)
             .ok_or_else(|| "Page.captureScreenshot missing data".to_string())?;
+        if let Some(max_dim) = max_dim.filter(|value| *value > 0) {
+            return shrink_png_data_url(data, max_dim).map(Value::String);
+        }
         Ok(Value::String(data.to_string()))
     }
 
@@ -989,6 +1025,10 @@ impl Daemon {
 
     async fn handle_request(&self, request: DaemonRequest) -> DaemonResponse {
         match request.meta.as_deref() {
+            Some(META_PING) => DaemonResponse {
+                result: Some(json!({"pong": true, "pid": std::process::id()})),
+                ..DaemonResponse::default()
+            },
             Some(META_DRAIN_EVENTS) => {
                 let mut state = self.state.lock().await;
                 let events = state.events.drain(..).collect::<Vec<_>>();
@@ -1002,15 +1042,35 @@ impl Daemon {
                 ..DaemonResponse::default()
             },
             Some(META_SET_SESSION) => {
+                let old_session = self.current_session().await;
                 {
                     let mut state = self.state.lock().await;
                     if let Some(session_id) = request.session_id.clone() {
-                        state.set_session(session_id);
+                        if let Some(target_id) = request.target_id.clone().or_else(|| {
+                            request
+                                .params
+                                .as_ref()?
+                                .get("target_id")?
+                                .as_str()
+                                .map(str::to_string)
+                        }) {
+                            state.set_attachment(session_id, target_id);
+                        } else {
+                            state.set_session(session_id);
+                        }
                     } else {
                         state.clear_session();
                     }
                 }
                 if let Some(session_id) = self.current_session().await {
+                    if old_session.as_deref().is_some_and(|old| old != session_id) {
+                        if let Some(old_session) = old_session {
+                            let _ = self
+                                .cdp
+                                .send_raw("Network.disable", json!({}), Some(&old_session))
+                                .await;
+                        }
+                    }
                     self.enable_session_domains(&session_id).await;
                     self.mark_session(&session_id).await;
                 }
@@ -1061,6 +1121,16 @@ impl Daemon {
                 }
             }
             Some(META_CURRENT_TAB) => match self.current_tab_result().await {
+                Ok(result) => DaemonResponse {
+                    result: Some(result),
+                    ..DaemonResponse::default()
+                },
+                Err(err) => DaemonResponse {
+                    error: Some(err),
+                    ..DaemonResponse::default()
+                },
+            },
+            Some(META_CONNECTION_STATUS) => match self.connection_status_result().await {
                 Ok(result) => DaemonResponse {
                     result: Some(result),
                     ..DaemonResponse::default()
@@ -1205,7 +1275,13 @@ impl Daemon {
                     .and_then(|params| params.get("full"))
                     .and_then(Value::as_bool)
                     .unwrap_or(false);
-                match self.screenshot_result(full).await {
+                let max_dim = request
+                    .params
+                    .as_ref()
+                    .and_then(|params| params.get("max_dim"))
+                    .and_then(Value::as_u64)
+                    .and_then(|value| u32::try_from(value).ok());
+                match self.screenshot_result(full, max_dim).await {
                     Ok(result) => DaemonResponse {
                         result: Some(result),
                         ..DaemonResponse::default()
@@ -1922,6 +1998,98 @@ fn push_event(events: &mut VecDeque<Value>, event: Value, capacity: usize) {
     events.push_back(event);
 }
 
+fn shrink_png_data_url(encoded: &str, max_dim: u32) -> Result<String, String> {
+    let bytes = decode_base64_standard(encoded)?;
+    let (width, height) = png_dimensions_from_bytes(&bytes)?;
+    if width <= max_dim && height <= max_dim {
+        return Ok(encoded.to_string());
+    }
+
+    let image = image::load_from_memory_with_format(&bytes, image::ImageFormat::Png)
+        .map_err(|err| format!("decode screenshot PNG: {err}"))?;
+    let resized = image.thumbnail(max_dim, max_dim);
+    let mut output = Cursor::new(Vec::new());
+    resized
+        .write_to(&mut output, image::ImageFormat::Png)
+        .map_err(|err| format!("encode resized screenshot PNG: {err}"))?;
+    Ok(encode_base64_standard(&output.into_inner()))
+}
+
+#[cfg(test)]
+fn png_dimensions_from_base64(encoded: &str) -> Result<(u32, u32), String> {
+    let bytes = decode_base64_standard(encoded)?;
+    png_dimensions_from_bytes(&bytes)
+}
+
+fn png_dimensions_from_bytes(bytes: &[u8]) -> Result<(u32, u32), String> {
+    if bytes.len() < 24 || &bytes[..8] != b"\x89PNG\r\n\x1a\n" {
+        return Err("screenshot result was not a PNG".to_string());
+    }
+    let width = u32::from_be_bytes([bytes[16], bytes[17], bytes[18], bytes[19]]);
+    let height = u32::from_be_bytes([bytes[20], bytes[21], bytes[22], bytes[23]]);
+    Ok((width, height))
+}
+
+fn decode_base64_standard(input: &str) -> Result<Vec<u8>, String> {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = Vec::new();
+    let mut chunk = [0u8; 4];
+    let mut len = 0usize;
+    for byte in input.bytes().filter(|b| !b.is_ascii_whitespace()) {
+        let value = if byte == b'=' {
+            64
+        } else {
+            TABLE
+                .iter()
+                .position(|candidate| *candidate == byte)
+                .ok_or_else(|| "invalid base64 character".to_string())? as u8
+        };
+        chunk[len] = value;
+        len += 1;
+        if len == 4 {
+            if chunk[0] == 64 || chunk[1] == 64 {
+                return Err("invalid base64 padding".to_string());
+            }
+            out.push((chunk[0] << 2) | (chunk[1] >> 4));
+            if chunk[2] != 64 {
+                out.push((chunk[1] << 4) | (chunk[2] >> 2));
+            }
+            if chunk[3] != 64 {
+                out.push((chunk[2] << 6) | chunk[3]);
+            }
+            len = 0;
+        }
+    }
+    if len != 0 {
+        return Err("invalid base64 length".to_string());
+    }
+    Ok(out)
+}
+
+fn encode_base64_standard(bytes: &[u8]) -> String {
+    const TABLE: &[u8; 64] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    let mut out = String::with_capacity(bytes.len().div_ceil(3) * 4);
+    for chunk in bytes.chunks(3) {
+        let b0 = chunk[0];
+        let b1 = chunk.get(1).copied().unwrap_or(0);
+        let b2 = chunk.get(2).copied().unwrap_or(0);
+
+        out.push(TABLE[(b0 >> 2) as usize] as char);
+        out.push(TABLE[(((b0 & 0b0000_0011) << 4) | (b1 >> 4)) as usize] as char);
+        if chunk.len() > 1 {
+            out.push(TABLE[(((b1 & 0b0000_1111) << 2) | (b2 >> 6)) as usize] as char);
+        } else {
+            out.push('=');
+        }
+        if chunk.len() > 2 {
+            out.push(TABLE[(b2 & 0b0011_1111) as usize] as char);
+        } else {
+            out.push('=');
+        }
+    }
+    out
+}
+
 fn request_shutdown(config: &DaemonConfig) -> Result<(), String> {
     let mut stream =
         UnixStream::connect(config.paths().sock).map_err(|err| format!("connect socket: {err}"))?;
@@ -1992,8 +2160,8 @@ mod tests {
     use serde_json::{json, Value};
 
     use super::{
-        is_real_page, key_fields, log_tail, push_event, stop_best_effort, stop_remote, tab_summary,
-        DaemonConfig,
+        encode_base64_standard, is_real_page, key_fields, log_tail, png_dimensions_from_base64,
+        push_event, shrink_png_data_url, stop_best_effort, stop_remote, tab_summary, DaemonConfig,
     };
 
     fn test_config(label: &str) -> DaemonConfig {
@@ -2060,6 +2228,26 @@ mod tests {
 
         assert!(!paths.pid.exists());
         assert!(!paths.sock.exists());
+    }
+
+    #[test]
+    fn png_dimensions_decode_base64_header() {
+        let png = "iVBORw0KGgoAAAANSUhEUgAAAAIAAAADCAQAAADY5+WAAAAAA0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
+        assert_eq!(png_dimensions_from_base64(png).unwrap(), (2, 3));
+    }
+
+    #[test]
+    fn screenshot_shrink_resizes_png_within_max_dim() {
+        let image = image::DynamicImage::ImageRgb8(image::RgbImage::new(4, 2));
+        let mut output = std::io::Cursor::new(Vec::new());
+        image
+            .write_to(&mut output, image::ImageFormat::Png)
+            .unwrap();
+        let encoded = encode_base64_standard(&output.into_inner());
+
+        let resized = shrink_png_data_url(&encoded, 2).unwrap();
+
+        assert_eq!(png_dimensions_from_base64(&resized).unwrap(), (2, 1));
     }
 
     #[test]

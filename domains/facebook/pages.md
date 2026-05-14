@@ -196,19 +196,16 @@ print(js("""
 
 ## Full example — mine one Page, emit JSON for downstream tools
 
-Helper-style extraction example. Map these calls to `browser-harness`,
-`bhrun`, or a guest as needed.
-
-```text
+```bash
+cd ~/Developer/browser-harness && uv run browser-harness <<'PY'
 import json, sys
 from urllib.parse import urlparse, parse_qs, unquote
-# helper-style example: map these calls to browser-harness / bhrun or a guest
 
 PAGE = "BoatingOntario.ca"   # vanity slug OR numeric Page ID
 TARGET = 30
 MAX_SCROLLS = 25
 
-goto(f"https://www.facebook.com/{PAGE}/posts")
+goto_url(f"https://www.facebook.com/{PAGE}/posts")
 wait_for_load()
 wait(3)
 
@@ -261,7 +258,7 @@ posts = list(seen.values())
 if meta.get("website_redirector"):
     meta["website"] = decode(meta["website_redirector"])
 all_externals = sorted({decode(x) for p in posts for x in p["externals"]})
-screenshot(f"/tmp/fb-page-{PAGE}.png", full=True)
+capture_screenshot(f"/tmp/fb-page-{PAGE}.png", full=True)
 print(json.dumps({
     "page": PAGE,
     "meta": meta,
@@ -269,6 +266,7 @@ print(json.dumps({
     "posts": posts,
     "external_urls": all_externals,
 }, ensure_ascii=False))
+PY
 ```
 
 The stdout JSON is the handoff payload — parse it in the calling agent and

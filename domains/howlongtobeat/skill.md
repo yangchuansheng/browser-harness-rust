@@ -10,7 +10,7 @@ HLTB runs a token-gated POST endpoint at `/api/find`. You must first fetch a ses
 
 ```text
 import json, re, urllib.request, time
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 UA = "Mozilla/5.0"
 
@@ -90,7 +90,7 @@ Token is reusable — fetch it once and pass it to multiple `search_hltb()` call
 
 ```text
 import json, re, urllib.request, time
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 UA = "Mozilla/5.0"
 
@@ -163,7 +163,7 @@ When you have a `game_id`, fetch the game page and extract `__NEXT_DATA__` for t
 
 ```text
 import json, re
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def get_game_detail(game_id):
     """
@@ -245,7 +245,7 @@ for rel in data['relationships'][:3]:
 
 ```text
 import json, re, urllib.request, time
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 UA = "Mozilla/5.0"
 
@@ -344,7 +344,7 @@ print(len(mario_games))   # 308
 ```text
 import json, re, urllib.request
 from concurrent.futures import ThreadPoolExecutor
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def fetch_game(game_id):
     html = http_get(f"https://howlongtobeat.com/game/{game_id}")

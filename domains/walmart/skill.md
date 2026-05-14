@@ -3,26 +3,6 @@
 Field-tested against walmart.com on 2026-04-18 using `http_get` (no browser required).
 All code blocks were run and outputs verified against live responses.
 
-## Rust-native paths
-
-For a direct HTML fetch, use the installed Rust CLI:
-
-```bash
-browser-harness http-get <<'JSON'
-{"url":"https://www.walmart.com/search?q=laptop","timeout":20.0}
-JSON
-```
-
-For the packaged search extraction workflow, run the guest:
-
-```bash
-cd rust
-cargo +stable build --release --target wasm32-unknown-unknown --manifest-path guests/rust-walmart-search/Cargo.toml
-cargo run --quiet --bin bhrun -- run-guest guests/rust-walmart-search/target/wasm32-unknown-unknown/release/rust_walmart_search_guest.wasm <<'JSON'
-{"daemon_name":"default","guest_module":"guests/rust-walmart-search/target/wasm32-unknown-unknown/release/rust_walmart_search_guest.wasm","granted_operations":["http_get"],"allow_http":true,"allow_raw_cdp":false,"persistent_guest_state":true}
-JSON
-```
-
 ---
 
 ## Fastest Approach: `http_get` with `__NEXT_DATA__`
@@ -411,7 +391,7 @@ new_tab("https://www.walmart.com/search?q=laptop")
 wait_for_load()
 wait(2)
 ```
-After that, `goto()` works normally within the same session.
+After that, `goto_url()` works normally within the same session.
 
 ---
 
@@ -456,10 +436,9 @@ The `__NEXT_DATA__` SSR approach replaces any need for the official API for read
 - **Page sizes vary**: Page 1 returned 66 items across 2 stacks; page 2 returned 55.
   Do not assume a fixed items-per-page count.
 
-- **`http_get` default already sends `Mozilla/5.0`**: the current
-  `browser-harness http-get` path already sends
-  `"User-Agent": "Mozilla/5.0"` by default. Only pass a custom `headers=` if
-  you need to change something else.
+- **`http_get` default already sends `Mozilla/5.0`**: `helpers.http_get()` uses
+  `"User-Agent": "Mozilla/5.0"` by default — no override needed when calling it directly.
+  Only pass a custom `headers=` if you need to change something else.
 
 - **`developer.api.walmart.com`** returns HTTP 403 without an API key. Not usable for
   unauthenticated scraping.

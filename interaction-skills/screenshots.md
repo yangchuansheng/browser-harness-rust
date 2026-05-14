@@ -20,12 +20,16 @@ The Rust runner and guest boundary now expose screenshot capture directly:
 - `bhrun screenshot`
 - `browser-harness screenshot`
 - `bh_guest_sdk::screenshot(full)`
+- `bh_guest_sdk::screenshot_with_max_dim(full, Some(max_dim))`
+
+Pass `max_dim` to bound the largest PNG side, matching upstream
+`capture_screenshot(max_dim=...)` behavior for image-aware LLM limits.
 
 The result is a base64-encoded PNG string:
 
 ```bash
 browser-harness screenshot <<'JSON' | jq -r . | base64 --decode > /tmp/page.png
-{"daemon_name":"default","full":true}
+{"daemon_name":"default","full":true,"max_dim":1800}
 JSON
 ```
 

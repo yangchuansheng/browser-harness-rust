@@ -1,10 +1,10 @@
 use bh_protocol::{
     META_CLICK, META_CONFIGURE_DOWNLOADS, META_CURRENT_TAB, META_DISPATCH_KEY,
-    META_ENSURE_REAL_TAB, META_GET_COOKIES, META_GOTO, META_HANDLE_DIALOG, META_IFRAME_TARGET,
-    META_JS, META_LIST_TABS, META_MOUSE_DOWN, META_MOUSE_MOVE, META_MOUSE_UP, META_NEW_TAB,
-    META_PAGE_INFO, META_PRESS_KEY, META_PRINT_PDF, META_SCREENSHOT, META_SCROLL, META_SET_COOKIES,
-    META_SET_VIEWPORT, META_SWITCH_TAB, META_TYPE_TEXT, META_UPLOAD_FILE, META_WAIT_FOR_LOAD,
-    PROTOCOL_VERSION,
+    META_ENSURE_REAL_TAB, META_FILL_INPUT, META_GET_COOKIES, META_GOTO, META_HANDLE_DIALOG,
+    META_IFRAME_TARGET, META_JS, META_LIST_TABS, META_MOUSE_DOWN, META_MOUSE_MOVE, META_MOUSE_UP,
+    META_NEW_TAB, META_PAGE_INFO, META_PRESS_KEY, META_PRINT_PDF, META_SCREENSHOT, META_SCROLL,
+    META_SET_COOKIES, META_SET_VIEWPORT, META_SWITCH_TAB, META_TYPE_TEXT, META_UPLOAD_FILE,
+    META_WAIT_FOR_ELEMENT, META_WAIT_FOR_LOAD, META_WAIT_FOR_NETWORK_IDLE, PROTOCOL_VERSION,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -320,6 +320,39 @@ pub struct TypeTextRequest {
     pub text: String,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WaitForElementRequest {
+    #[serde(default = "default_daemon_name")]
+    pub daemon_name: String,
+    pub selector: String,
+    #[serde(default = "default_wait_timeout_seconds")]
+    pub timeout: f64,
+    #[serde(default)]
+    pub visible: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FillInputRequest {
+    #[serde(default = "default_daemon_name")]
+    pub daemon_name: String,
+    pub selector: String,
+    pub text: String,
+    #[serde(default = "default_clear_first")]
+    pub clear_first: bool,
+    #[serde(default)]
+    pub timeout: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct WaitForNetworkIdleRequest {
+    #[serde(default = "default_daemon_name")]
+    pub daemon_name: String,
+    #[serde(default = "default_network_idle_timeout_seconds")]
+    pub timeout: f64,
+    #[serde(default = "default_network_idle_ms")]
+    pub idle_ms: u64,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PressKeyRequest {
     #[serde(default = "default_daemon_name")]
@@ -383,6 +416,8 @@ pub struct ScreenshotRequest {
     pub daemon_name: String,
     #[serde(default)]
     pub full: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max_dim: Option<u32>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -817,6 +852,39 @@ impl Default for TypeTextRequest {
     }
 }
 
+impl Default for WaitForElementRequest {
+    fn default() -> Self {
+        Self {
+            daemon_name: default_daemon_name(),
+            selector: String::new(),
+            timeout: default_wait_timeout_seconds(),
+            visible: false,
+        }
+    }
+}
+
+impl Default for FillInputRequest {
+    fn default() -> Self {
+        Self {
+            daemon_name: default_daemon_name(),
+            selector: String::new(),
+            text: String::new(),
+            clear_first: default_clear_first(),
+            timeout: 0.0,
+        }
+    }
+}
+
+impl Default for WaitForNetworkIdleRequest {
+    fn default() -> Self {
+        Self {
+            daemon_name: default_daemon_name(),
+            timeout: default_network_idle_timeout_seconds(),
+            idle_ms: default_network_idle_ms(),
+        }
+    }
+}
+
 impl Default for PressKeyRequest {
     fn default() -> Self {
         Self {
@@ -876,6 +944,7 @@ impl Default for ScreenshotRequest {
         Self {
             daemon_name: default_daemon_name(),
             full: false,
+            max_dim: None,
         }
     }
 }
@@ -1152,6 +1221,55 @@ impl TypeTextRequest {
     }
 }
 
+impl WaitForElementRequest {
+    pub fn normalized(&self) -> Self {
+        Self {
+            daemon_name: normalize_daemon_name(&self.daemon_name),
+            selector: self.selector.clone(),
+            timeout: if self.timeout.is_finite() && self.timeout >= 0.0 {
+                self.timeout
+            } else {
+                default_wait_timeout_seconds()
+            },
+            visible: self.visible,
+        }
+    }
+}
+
+impl FillInputRequest {
+    pub fn normalized(&self) -> Self {
+        Self {
+            daemon_name: normalize_daemon_name(&self.daemon_name),
+            selector: self.selector.clone(),
+            text: self.text.clone(),
+            clear_first: self.clear_first,
+            timeout: if self.timeout.is_finite() && self.timeout >= 0.0 {
+                self.timeout
+            } else {
+                0.0
+            },
+        }
+    }
+}
+
+impl WaitForNetworkIdleRequest {
+    pub fn normalized(&self) -> Self {
+        Self {
+            daemon_name: normalize_daemon_name(&self.daemon_name),
+            timeout: if self.timeout.is_finite() && self.timeout >= 0.0 {
+                self.timeout
+            } else {
+                default_network_idle_timeout_seconds()
+            },
+            idle_ms: if self.idle_ms == 0 {
+                default_network_idle_ms()
+            } else {
+                self.idle_ms
+            },
+        }
+    }
+}
+
 impl PressKeyRequest {
     pub fn normalized(&self) -> Self {
         Self {
@@ -1257,6 +1375,7 @@ impl ScreenshotRequest {
                 self.daemon_name.clone()
             },
             full: self.full,
+            max_dim: self.max_dim.filter(|value| *value > 0),
         }
     }
 }
@@ -1778,6 +1897,18 @@ pub fn default_operations() -> Vec<HostOperation> {
             "Insert text using browser input primitives.",
         ),
         compatibility_helper(
+            META_WAIT_FOR_ELEMENT,
+            "Poll until a selector exists, optionally requiring visibility.",
+        ),
+        compatibility_helper(
+            META_FILL_INPUT,
+            "Focus, clear, type, and dispatch input/change events for framework-managed fields.",
+        ),
+        compatibility_helper(
+            META_WAIT_FOR_NETWORK_IDLE,
+            "Wait until session-scoped Network events become idle.",
+        ),
+        compatibility_helper(
             META_PRESS_KEY,
             "Dispatch browser-level keydown/char/keyup sequences.",
         ),
@@ -2134,12 +2265,32 @@ fn default_wait_timeout_seconds() -> f64 {
     15.0
 }
 
+fn default_network_idle_timeout_seconds() -> f64 {
+    10.0
+}
+
+fn default_network_idle_ms() -> u64 {
+    500
+}
+
+fn default_clear_first() -> bool {
+    true
+}
+
 fn default_http_timeout_seconds() -> f64 {
     20.0
 }
 
 fn default_daemon_name() -> String {
     "default".to_string()
+}
+
+fn normalize_daemon_name(name: &str) -> String {
+    if name.trim().is_empty() {
+        default_daemon_name()
+    } else {
+        name.to_string()
+    }
 }
 
 fn default_include_internal() -> bool {
@@ -2751,11 +2902,13 @@ mod tests {
         let request = ScreenshotRequest {
             daemon_name: "   ".to_string(),
             full: true,
+            max_dim: Some(0),
         };
         let normalized = request.normalized();
 
         assert_eq!(normalized.daemon_name, "default");
         assert!(normalized.full);
+        assert_eq!(normalized.max_dim, None);
     }
 
     #[test]

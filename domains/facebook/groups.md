@@ -170,19 +170,16 @@ print(js("""
 
 ## Full example — mine one group, emit JSON for downstream tools
 
-Helper-style extraction example. Map these calls to `browser-harness`,
-`bhrun`, or a guest as needed.
-
-```text
+```bash
+cd ~/Developer/browser-harness && uv run browser-harness <<'PY'
 import json, sys
 from urllib.parse import urlparse, parse_qs, unquote
-# helper-style example: map these calls to browser-harness / bhrun or a guest
 
 GROUP = "riceLakeBoating"          # slug or numeric id
 TARGET = 50                         # how many posts to collect
 MAX_SCROLLS = 30
 
-goto(f"https://www.facebook.com/groups/{GROUP}/?sorting_setting=CHRONOLOGICAL")
+goto_url(f"https://www.facebook.com/groups/{GROUP}/?sorting_setting=CHRONOLOGICAL")
 wait_for_load()
 wait(2)
 
@@ -218,13 +215,14 @@ def decode(u):
 
 posts = list(seen.values())
 all_externals = sorted({decode(x) for p in posts for x in p["externals"]})
-screenshot(f"/tmp/fb-group-{GROUP}.png", full=True)
+capture_screenshot(f"/tmp/fb-group-{GROUP}.png", full=True)
 print(json.dumps({
     "group": GROUP,
     "post_count": len(posts),
     "posts": posts,
     "external_urls": all_externals,
 }, ensure_ascii=False))
+PY
 ```
 
 The JSON on stdout is the handoff payload — parse it in the calling agent and

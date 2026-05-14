@@ -2,26 +2,6 @@
 
 `https://www.tradingview.com` — charting platform with multiple internal REST APIs. Stock/crypto/forex screener and symbol search work without auth. Use `http_get` or raw `urllib` for all workflows except JS-rendered chart pages.
 
-## Rust-native paths
-
-For a direct symbol-search fetch, use the installed Rust CLI:
-
-```bash
-browser-harness http-get <<'JSON'
-{"url":"https://symbol-search.tradingview.com/symbol_search/v3/?text=AAPL&hl=1&exchange=NASDAQ&lang=en&search_type=stock&domain=production","headers":{"Origin":"https://www.tradingview.com"},"timeout":20.0}
-JSON
-```
-
-For the packaged symbol-search workflow, run the guest:
-
-```bash
-cd rust
-cargo +stable build --release --target wasm32-unknown-unknown --manifest-path guests/rust-tradingview-symbol-search/Cargo.toml
-cargo run --quiet --bin bhrun -- run-guest guests/rust-tradingview-symbol-search/target/wasm32-unknown-unknown/release/rust_tradingview_symbol_search_guest.wasm <<'JSON'
-{"daemon_name":"default","guest_module":"guests/rust-tradingview-symbol-search/target/wasm32-unknown-unknown/release/rust_tradingview_symbol_search_guest.wasm","granted_operations":["http_get"],"allow_http":true,"allow_raw_cdp":false,"persistent_guest_state":true}
-JSON
-```
-
 ## Do this first
 
 **Use the scanner API for bulk screener data — one POST, no browser, full column control.**
@@ -322,8 +302,8 @@ The charting UI (`/chart/`), symbol detail pages (`/symbols/NASDAQ-AAPL/`), and 
 
 ```text
 # Only if you need a chart screenshot:
-goto("https://www.tradingview.com/chart/?symbol=NASDAQ:AAPL")
+goto_url("https://www.tradingview.com/chart/?symbol=NASDAQ:AAPL")
 wait_for_load()
 wait(3)   # chart renders asynchronously after readyState
-screenshot("/tmp/aapl_chart.png", full=False)
+capture_screenshot("/tmp/aapl_chart.png", full=False)
 ```

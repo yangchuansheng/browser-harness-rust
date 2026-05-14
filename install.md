@@ -73,6 +73,48 @@ mkdir -p "${CODEX_HOME:-$HOME/.codex}/skills/browser-harness" && ln -sf "$PWD/SK
 
 That makes new Codex or Claude Code sessions in other folders load the runtime browser harness instructions automatically. An empty `~/.codex/skills/browser-harness/` directory is fine; the symlink command above populates it.
 
+## Browser connection reference
+
+Browser Harness can attach to Browser Use cloud browsers or to a local
+Chrome/Chromium-family browser.
+
+**Cloud browsers.** Use `browser-harness create-browser` with
+`BROWSER_USE_API_KEY`; pass the returned `cdpWsUrl` to a daemon through
+`BU_CDP_WS`, and keep `BU_BROWSER_ID` so shutdown stops billing and persists the
+cloud profile state. Profile sync commands live in
+`interaction-skills/profile-sync.md` and sync cookies only.
+
+**Local Way 1 — real profile.** In the running browser, open
+`chrome://inspect/#remote-debugging` and tick "Allow remote debugging for this
+browser instance". The setting is per-profile and sticky. Chrome 144+ may show
+an in-browser "Allow remote debugging?" popup on attach; click `Allow` when it
+appears. This path uses the user's real logins, extensions, history, and tabs.
+
+**Local Way 2 — isolated automation profile.** Launch Chrome/Chromium with a
+non-default user-data-dir and a debugging port, then point the harness at it:
+
+```bash
+/Applications/Google\ Chrome.app/Contents/MacOS/Google\ Chrome \
+  --remote-debugging-port=9222 \
+  --user-data-dir="$HOME/.browser-harness/chrome-9222"
+export BU_CDP_URL="http://127.0.0.1:9222"
+browser-harness page-info <<'JSON'
+{"daemon_name":"default"}
+JSON
+```
+
+The `--user-data-dir` must not be Chrome's platform default. Chrome 136+ ignores
+remote-debugging flags against the default profile directory, and copied default
+profile cookies generally do not survive because their encryption key is bound
+to the original directory. Use Way 1 for real logins; use Way 2 or cloud when
+unattended automation must avoid popups.
+
+`BU_CDP_WS` always wins when already set. `BU_CDP_URL` resolves `/json/version`
+and falls back to `DevToolsActivePort` when newer Chrome builds return 404.
+`BH_RUNTIME_DIR` keeps socket/pid files in a short runtime path; `BH_TMP_DIR`
+keeps logs, screenshots, and debug artifacts in a separate temp path. For Snap
+or Flatpak browser troubleshooting, see [docs/snap-linux-headless.md](docs/snap-linux-headless.md).
+
 ## Browser bootstrap
 
 1. Install the Rust binaries if `browser-harness` is still missing:
@@ -135,7 +177,7 @@ If that fails with a stale websocket or stale socket, restart the daemon once an
 browser-harness restart-daemon
 ```
 
-8. After install and browser bootstrap succeed, navigate to `https://github.com/browser-use/browser-harness` so the user can see the harness has attached to their browser. If the user is logged in to GitHub, **ask the user whether you should star the repo for them** as a quick demo that the interaction works — only click the star if they say yes. Then ask the user what they want to do next.
+8. After install and browser bootstrap succeeds, navigate to `https://github.com/browser-use/browser-harness` so the user can see the harness has attached to their browser, then continue with the user's requested browser task.
 
 ## Cold-start reminders
 

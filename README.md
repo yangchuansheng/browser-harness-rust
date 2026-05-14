@@ -103,6 +103,27 @@ If you want the shortest decision rule:
 - Choose `browser-harness-js` if you want the agent to speak almost-direct CDP in JS/TS.
 - Choose this repo if you want the harness idea packaged as a typed runtime, daemon, CLI, and guest host.
 
+## Upstream Parity
+
+This Rust fork tracks the upstream
+[`browser-use/browser-harness`](https://github.com/browser-use/browser-harness)
+behavior while preserving the Rust runtime architecture. The Apr-May 2026 sync
+ported the latest discovery, daemon, helper, domain-skill, and setup-doc
+changes into equivalent Rust crates and CLIs.
+
+Notable parity points:
+
+- local discovery for Chrome Canary, Comet, Arc, Dia, Brave, Edge channels,
+  Windows Chrome SxS, and Flatpak profile directories
+- `BU_CDP_WS`, `BU_CDP_URL`, `/json/version` resolution, and
+  `DevToolsActivePort` fallback for newer Chrome builds
+- split `BH_RUNTIME_DIR` for sockets/pids from `BH_TMP_DIR` for logs/screenshots
+- daemon liveness/status metadata and the 🐴 controlled-tab marker
+- helper operations: `wait-for-element`, `fill-input`, `wait-for-network-idle`,
+  and screenshot `max_dim`
+- imported upstream domain skills under `domains/` and issue templates under
+  `.github/ISSUE_TEMPLATE/`
+
 ## Quick Start
 
 Install once, then use the Rust-native CLI directly:
@@ -138,12 +159,16 @@ Paste into Claude Code or Codex:
 ```text
 Set up https://github.com/yangchuansheng/browser-harness.git for me.
 
-Read `install.md` first to install and connect this repo to my real browser. Then read `SKILL.md` for normal usage. Prefer the Rust-native CLI path first. When you open a setup or verification tab, activate it so I can see the active browser tab. After it is installed, open this repository in my browser and, if I am logged in to GitHub, ask me whether you should star it for me as a quick demo that the interaction works — only click the star if I say yes. If I am not logged in, just go to browser-use.com.
+Read `install.md` first to install and connect this repo to my real browser. Then read `SKILL.md` for normal usage. Prefer the Rust-native CLI path first. When you open a setup or verification tab, activate it so I can see the active browser tab. After it is installed, open this repository in my browser so I can see the harness has attached, then continue with my requested browser task.
 ```
 
 When this page appears, tick the checkbox so the agent can connect to your browser:
 
 <img src="docs/setup-remote-debugging.png" alt="Remote debugging setup" width="520" style="border-radius: 12px;" />
+
+On Chrome 144+ also click `Allow` when the per-attach popup appears:
+
+<img src="docs/allow-remote-debugging.png" alt="Allow remote debugging popup" width="520" style="border-radius: 12px;" />
 
 See [domains/](domains/) for the active site-specific knowledge tree.
 
@@ -164,6 +189,7 @@ as the live browser session and CDP connection details.
 - [docs/wasm-guests.md](docs/wasm-guests.md) — current guest model, capabilities, and build/run flow
 - [docs/future-wasm.md](docs/future-wasm.md) — long-term guest direction
 - [docs/python-integration.md](docs/python-integration.md) — optional Python subprocess wrappers
+- [docs/snap-linux-headless.md](docs/snap-linux-headless.md) — Snap/Flatpak/headless browser troubleshooting
 
 ## Project Structure
 

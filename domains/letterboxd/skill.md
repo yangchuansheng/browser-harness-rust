@@ -2,33 +2,6 @@
 
 `https://letterboxd.com` — film logging, rating, and review site. Film pages and user profile root pages are publicly accessible via `http_get` (~200–350ms). Most sub-pages (reviews, ratings, user film lists, browse/genre pages) return 403 and require the browser.
 
-## Rust-native paths
-
-For film-page HTTP reads, use the installed Rust CLI:
-
-```bash
-browser-harness http-get <<'JSON'
-{"url":"https://letterboxd.com/film/parasite-2019/","timeout":20.0}
-JSON
-```
-
-For the popular films page, use the guest. This assumes a live browser daemon
-is already attached:
-
-```bash
-cd rust
-cargo +stable build --release --target wasm32-unknown-unknown --manifest-path guests/rust-letterboxd-popular/Cargo.toml
-cargo run --quiet --bin bhrun -- run-guest guests/rust-letterboxd-popular/target/wasm32-unknown-unknown/release/rust_letterboxd_popular_guest.wasm <<'JSON'
-{"daemon_name":"default","guest_module":"guests/rust-letterboxd-popular/target/wasm32-unknown-unknown/release/rust_letterboxd_popular_guest.wasm","granted_operations":["ensure_real_tab","goto","wait_for_load","wait","page_info","js"],"allow_http":false,"allow_raw_cdp":false,"persistent_guest_state":true}
-JSON
-```
-
-Examples below use helper-style operations such as `http_get()`, `goto()`, `new_tab()`, `page_info()`, `wait()`, and `js()`. Map them to `browser-harness`, `bhrun`, or a guest as needed:
-
-```text
-# helper-style example: map these calls to browser-harness / bhrun or a guest
-```
-
 ## Access path decision table
 
 | Goal | Method | Latency |
@@ -59,6 +32,7 @@ Film pages at `letterboxd.com/film/{slug}/` are fully accessible. The JSON-LD bl
 
 ```text
 import json, re, html as htmllib
+from helpers import http_get
 
 def extract_film_data(slug):
     """
@@ -189,6 +163,7 @@ Only the user root page `letterboxd.com/{username}/` is accessible. Sub-pages (`
 
 ```text
 import re, html as htmllib
+from helpers import http_get
 
 def extract_user_profile(username):
     html = http_get(f"https://letterboxd.com/{username}/")
@@ -244,6 +219,7 @@ data = extract_user_profile('dave')
 
 ```text
 import re, html as htmllib
+from helpers import http_get
 
 def extract_activity_stream():
     html = http_get("https://letterboxd.com/films/")
@@ -274,13 +250,14 @@ def extract_activity_stream():
 
 ## Path 4: Browser for list pages and sub-pages (403 via http_get)
 
-These pages require the browser — use `goto()` + `wait_for_load()` + `wait(2)`:
+These pages require the browser — use `goto_url()` + `wait_for_load()` + `wait(2)`:
 
 ```text
+from helpers import goto, wait_for_load, wait, js
 import json
 
 # Popular films
-goto("https://letterboxd.com/films/popular/")
+goto_url("https://letterboxd.com/films/popular/")
 wait_for_load()
 wait(2)
 
@@ -299,7 +276,7 @@ films = json.loads(js("""
 """))
 
 # User watched films list (paginated, 72/page)
-goto("https://letterboxd.com/dave/films/")
+goto_url("https://letterboxd.com/dave/films/")
 wait_for_load()
 wait(2)
 
@@ -317,7 +294,7 @@ films = json.loads(js("""
 """))
 
 # User diary entries
-goto("https://letterboxd.com/dave/diary/")
+goto_url("https://letterboxd.com/dave/diary/")
 wait_for_load()
 wait(2)
 
@@ -328,7 +305,7 @@ next_page_url = js("""
   return a ? a.href : null;
 })()
 """)
-# Returns URL for next page or null. Load it with goto(next_page_url).
+# Returns URL for next page or null. Load it with goto_url(next_page_url).
 ```
 
 ---

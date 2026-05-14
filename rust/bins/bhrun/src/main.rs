@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::io::{self, BufRead, Read, Write};
 use std::os::unix::net::UnixStream;
 use std::path::Path;
@@ -16,14 +17,15 @@ use bh_wasm_host::{
     console_event_matches, default_manifest, default_runner_config, event_matches_filter,
     operation_names, CdpRawRequest, ClickRequest, ConfigureDownloadsRequest, CookieParam,
     CookieRecord, CurrentSessionRequest, CurrentSessionResult, CurrentTabRequest,
-    DispatchKeyRequest, EnsureRealTabRequest, GetCookiesRequest, GotoRequest, GuestCallRecord,
-    GuestRunResult, GuestServeRequest, GuestServeResponse, HandleDialogRequest, HttpGetRequest,
-    IframeTargetRequest, JsRequest, ListTabsRequest, MouseDownRequest, MouseMoveRequest,
-    MouseUpRequest, NewTabRequest, NewTabResult, PageInfoRequest, PressKeyRequest, PrintPdfRequest,
-    RunnerConfig, ScreenshotRequest, ScrollRequest, SetCookiesRequest, SetViewportRequest,
-    SwitchTabRequest, SwitchTabResult, TabSummary, TypeTextRequest, UploadFileRequest,
-    WaitForConsoleRequest, WaitForDialogRequest, WaitForDownloadRequest, WaitForEventRequest,
-    WaitForEventResult, WaitForLoadEventRequest, WaitForLoadRequest, WaitForRequestRequest,
+    DispatchKeyRequest, EnsureRealTabRequest, FillInputRequest, GetCookiesRequest, GotoRequest,
+    GuestCallRecord, GuestRunResult, GuestServeRequest, GuestServeResponse, HandleDialogRequest,
+    HttpGetRequest, IframeTargetRequest, JsRequest, ListTabsRequest, MouseDownRequest,
+    MouseMoveRequest, MouseUpRequest, NewTabRequest, NewTabResult, PageInfoRequest,
+    PressKeyRequest, PrintPdfRequest, RunnerConfig, ScreenshotRequest, ScrollRequest,
+    SetCookiesRequest, SetViewportRequest, SwitchTabRequest, SwitchTabResult, TabSummary,
+    TypeTextRequest, UploadFileRequest, WaitForConsoleRequest, WaitForDialogRequest,
+    WaitForDownloadRequest, WaitForElementRequest, WaitForEventRequest, WaitForEventResult,
+    WaitForLoadEventRequest, WaitForLoadRequest, WaitForNetworkIdleRequest, WaitForRequestRequest,
     WaitForResponseRequest, WaitRequest, WaitResult, WatchEventsLine, WatchEventsRequest,
 };
 use reqwest::header::{HeaderMap, HeaderName, HeaderValue, USER_AGENT};
@@ -36,7 +38,7 @@ const DAEMON_TIMEOUT_SLACK: Duration = Duration::from_secs(5);
 
 fn print_usage() {
     eprintln!(
-        "usage: bhrun <manifest|sample-config|capabilities|summary|run-guest [path]|serve-guest [path]|current-tab|list-tabs|new-tab|switch-tab|ensure-real-tab|iframe-target|page-info|goto|wait-for-load|js|click|mouse-move|mouse-down|mouse-up|type-text|press-key|dispatch-key|scroll|set-viewport|print-pdf|screenshot|handle-dialog|upload-file|get-cookies|set-cookies|configure-downloads|wait|http-get|current-session|drain-events|cdp-raw|wait-for-event|watch-events|wait-for-load-event|wait-for-download|wait-for-request|wait-for-response|wait-for-console|wait-for-dialog>\n\
+        "usage: bhrun <manifest|sample-config|capabilities|summary|run-guest [path]|serve-guest [path]|current-tab|list-tabs|new-tab|switch-tab|ensure-real-tab|iframe-target|page-info|goto|wait-for-load|js|click|mouse-move|mouse-down|mouse-up|type-text|wait-for-element|fill-input|wait-for-network-idle|press-key|dispatch-key|scroll|set-viewport|print-pdf|screenshot|handle-dialog|upload-file|get-cookies|set-cookies|configure-downloads|wait|http-get|current-session|drain-events|cdp-raw|wait-for-event|watch-events|wait-for-load-event|wait-for-download|wait-for-request|wait-for-response|wait-for-console|wait-for-dialog>\n\
          runner scaffold: persistent guest serving, event waiting, and preview guest execution are live"
     );
 }
@@ -71,7 +73,7 @@ where
             let manifest = default_manifest();
             writeln!(
                 stdout,
-                "bhrun scaffold: execution_model={:?} guest_transport={:?} protocol_families={} operations={} current_tab=live list_tabs=live new_tab=live switch_tab=live ensure_real_tab=live iframe_target=live page_info=live goto=live wait_for_load=live js=live click=live mouse_move=live mouse_down=live mouse_up=live type_text=live press_key=live dispatch_key=live scroll=live set_viewport=live print_pdf=live screenshot=live handle_dialog=live upload_file=live get_cookies=live set_cookies=live configure_downloads=live wait=live http_get=live current_session=live cdp_raw=experimental wait_for_event=live watch_events=live wait_for_download=live wait_for_request=live wait_for_response=live wait_for_console=live wait_for_dialog=live wasm_guests=preview persistent_guest_runner=preview",
+                "bhrun scaffold: execution_model={:?} guest_transport={:?} protocol_families={} operations={} current_tab=live list_tabs=live new_tab=live switch_tab=live ensure_real_tab=live iframe_target=live page_info=live goto=live wait_for_load=live js=live click=live mouse_move=live mouse_down=live mouse_up=live type_text=live wait_for_element=live fill_input=live wait_for_network_idle=live press_key=live dispatch_key=live scroll=live set_viewport=live print_pdf=live screenshot=live handle_dialog=live upload_file=live get_cookies=live set_cookies=live configure_downloads=live wait=live http_get=live current_session=live cdp_raw=experimental wait_for_event=live watch_events=live wait_for_download=live wait_for_request=live wait_for_response=live wait_for_console=live wait_for_dialog=live wasm_guests=preview persistent_guest_runner=preview",
                 manifest.execution_model,
                 manifest.guest_transport,
                 manifest.protocol_families.len(),
@@ -170,6 +172,22 @@ where
         Some("type-text") => {
             let request = read_optional_json::<TypeTextRequest, _>(&mut stdin)?.unwrap_or_default();
             let result = type_text(request)?;
+            write_json(&mut stdout, &result)
+        }
+        Some("wait-for-element") => {
+            let request = read_json::<WaitForElementRequest, _>(&mut stdin)?;
+            let result = wait_for_element(request)?;
+            write_json(&mut stdout, &result)
+        }
+        Some("fill-input") => {
+            let request = read_json::<FillInputRequest, _>(&mut stdin)?;
+            let result = fill_input(request)?;
+            write_json(&mut stdout, &result)
+        }
+        Some("wait-for-network-idle") => {
+            let request =
+                read_optional_json::<WaitForNetworkIdleRequest, _>(&mut stdin)?.unwrap_or_default();
+            let result = wait_for_network_idle(request)?;
             write_json(&mut stdout, &result)
         }
         Some("press-key") => {
@@ -374,6 +392,18 @@ fn mouse_up(request: MouseUpRequest) -> Result<(), String> {
 
 fn type_text(request: TypeTextRequest) -> Result<(), String> {
     type_text_with_sender(request, send_daemon_request)
+}
+
+fn wait_for_element(request: WaitForElementRequest) -> Result<bool, String> {
+    wait_for_element_with_sender(request, send_daemon_request)
+}
+
+fn fill_input(request: FillInputRequest) -> Result<(), String> {
+    fill_input_with_sender(request, send_daemon_request)
+}
+
+fn wait_for_network_idle(request: WaitForNetworkIdleRequest) -> Result<bool, String> {
+    wait_for_network_idle_with_drain(request, current_session, drain_events)
 }
 
 fn press_key(request: PressKeyRequest) -> Result<(), String> {
@@ -948,6 +978,198 @@ where
     )
 }
 
+fn wait_for_element_with_sender<F>(
+    request: WaitForElementRequest,
+    mut sender: F,
+) -> Result<bool, String>
+where
+    F: FnMut(&str, &DaemonRequest) -> Result<DaemonResponse, String>,
+{
+    let request = request.normalized();
+    if request.selector.trim().is_empty() {
+        return Err("wait_for_element requires a non-empty selector".to_string());
+    }
+    let deadline = Instant::now() + Duration::from_secs_f64(request.timeout.max(0.0));
+    let poll = Duration::from_millis(300);
+    let expression = element_exists_expression(&request.selector, request.visible)?;
+
+    loop {
+        let result = js_with_sender(
+            JsRequest {
+                daemon_name: request.daemon_name.clone(),
+                expression: expression.clone(),
+                target_id: None,
+            },
+            &mut sender,
+        )?;
+        if result.as_bool().unwrap_or(false) {
+            return Ok(true);
+        }
+        if Instant::now() >= deadline {
+            return Ok(false);
+        }
+        thread::sleep(poll.min(deadline.saturating_duration_since(Instant::now())));
+    }
+}
+
+fn fill_input_with_sender<F>(request: FillInputRequest, mut sender: F) -> Result<(), String>
+where
+    F: FnMut(&str, &DaemonRequest) -> Result<DaemonResponse, String>,
+{
+    let request = request.normalized();
+    if request.selector.trim().is_empty() {
+        return Err("fill_input requires a non-empty selector".to_string());
+    }
+    if request.timeout > 0.0 {
+        let found = wait_for_element_with_sender(
+            WaitForElementRequest {
+                daemon_name: request.daemon_name.clone(),
+                selector: request.selector.clone(),
+                timeout: request.timeout,
+                visible: false,
+            },
+            &mut sender,
+        )?;
+        if !found {
+            return Err(format!(
+                "fill_input timed out waiting for selector {}",
+                request.selector
+            ));
+        }
+    }
+
+    let prepare = fill_input_prepare_expression(&request.selector, request.clear_first)?;
+    let focused = js_with_sender(
+        JsRequest {
+            daemon_name: request.daemon_name.clone(),
+            expression: prepare,
+            target_id: None,
+        },
+        &mut sender,
+    )?;
+    if !focused.as_bool().unwrap_or(false) {
+        return Err(format!(
+            "fill_input selector not found: {}",
+            request.selector
+        ));
+    }
+    if !request.text.is_empty() {
+        type_text_with_sender(
+            TypeTextRequest {
+                daemon_name: request.daemon_name.clone(),
+                text: request.text,
+            },
+            &mut sender,
+        )?;
+    }
+    let finalize = fill_input_finalize_expression(&request.selector)?;
+    js_with_sender(
+        JsRequest {
+            daemon_name: request.daemon_name,
+            expression: finalize,
+            target_id: None,
+        },
+        &mut sender,
+    )?;
+    Ok(())
+}
+
+fn wait_for_network_idle_with_drain<S, D>(
+    request: WaitForNetworkIdleRequest,
+    mut session_sender: S,
+    mut drain: D,
+) -> Result<bool, String>
+where
+    S: FnMut(CurrentSessionRequest) -> Result<CurrentSessionResult, String>,
+    D: FnMut(&str) -> Result<Vec<Value>, String>,
+{
+    let request = request.normalized();
+    let session = session_sender(CurrentSessionRequest {
+        daemon_name: request.daemon_name.clone(),
+    })?
+    .session_id;
+    let start = Instant::now();
+    let timeout = Duration::from_secs_f64(request.timeout.max(0.0));
+    let idle = Duration::from_millis(request.idle_ms);
+    let poll = Duration::from_millis(100);
+    let mut in_flight = HashSet::<String>::new();
+    let mut last_activity = Instant::now();
+
+    loop {
+        for event in drain(&request.daemon_name)? {
+            if let Some(session_id) = session.as_deref() {
+                if event.get("session_id").and_then(Value::as_str) != Some(session_id) {
+                    continue;
+                }
+            }
+            let Some(method) = event.get("method").and_then(Value::as_str) else {
+                continue;
+            };
+            if method.starts_with("Network.") {
+                last_activity = Instant::now();
+            }
+            let request_id = event
+                .pointer("/params/requestId")
+                .and_then(Value::as_str)
+                .map(str::to_string);
+            match method {
+                "Network.requestWillBeSent" => {
+                    if let Some(request_id) = request_id {
+                        in_flight.insert(request_id);
+                    }
+                }
+                "Network.loadingFinished" | "Network.loadingFailed" => {
+                    if let Some(request_id) = request_id {
+                        in_flight.remove(&request_id);
+                    }
+                }
+                _ => {}
+            }
+        }
+        if in_flight.is_empty() && last_activity.elapsed() >= idle {
+            return Ok(true);
+        }
+        if start.elapsed() >= timeout {
+            return Ok(false);
+        }
+        thread::sleep(poll.min(timeout.saturating_sub(start.elapsed())));
+    }
+}
+
+fn element_exists_expression(selector: &str, visible: bool) -> Result<String, String> {
+    let selector =
+        serde_json::to_string(selector).map_err(|err| format!("escape selector: {err}"))?;
+    let visibility = if visible {
+        "if (typeof e.checkVisibility === 'function') return e.checkVisibility({visibilityProperty: true, contentVisibilityAuto: true}); const r = e.getBoundingClientRect(); const s = getComputedStyle(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && s.display !== 'none';"
+    } else {
+        "return true;"
+    };
+    Ok(format!(
+        "(() => {{ const e = document.querySelector({selector}); if (!e) return false; {visibility} }})()"
+    ))
+}
+
+fn fill_input_prepare_expression(selector: &str, clear_first: bool) -> Result<String, String> {
+    let selector =
+        serde_json::to_string(selector).map_err(|err| format!("escape selector: {err}"))?;
+    let clear = if clear_first {
+        "e.value = ''; e.dispatchEvent(new Event('input', {bubbles:true}));"
+    } else {
+        ""
+    };
+    Ok(format!(
+        "(() => {{ const e = document.querySelector({selector}); if (!e) return false; e.focus(); {clear} return true; }})()"
+    ))
+}
+
+fn fill_input_finalize_expression(selector: &str) -> Result<String, String> {
+    let selector =
+        serde_json::to_string(selector).map_err(|err| format!("escape selector: {err}"))?;
+    Ok(format!(
+        "(() => {{ const e = document.querySelector({selector}); if (!e) return false; e.dispatchEvent(new Event('input', {{bubbles:true}})); e.dispatchEvent(new Event('change', {{bubbles:true}})); return true; }})()"
+    ))
+}
+
 fn press_key_with_sender<F>(request: PressKeyRequest, mut sender: F) -> Result<(), String>
 where
     F: FnMut(&str, &DaemonRequest) -> Result<DaemonResponse, String>,
@@ -1029,10 +1251,14 @@ where
     F: FnMut(&str, &DaemonRequest) -> Result<DaemonResponse, String>,
 {
     let request = request.normalized();
+    let mut params = serde_json::Map::from_iter([("full".to_string(), Value::Bool(request.full))]);
+    if let Some(max_dim) = request.max_dim {
+        params.insert("max_dim".to_string(), Value::Number(max_dim.into()));
+    }
     typed_meta_result_with_sender(
         &request.daemon_name,
         META_SCREENSHOT,
-        Some(json!({"full": request.full})),
+        Some(Value::Object(params)),
         &mut sender,
     )
 }
@@ -1497,6 +1723,17 @@ fn dispatch_guest_operation(
         "type_text" => {
             serialize_guest_result(type_text(parse_request_value(&request)?), "type_text")?
         }
+        "wait_for_element" => serialize_guest_result(
+            wait_for_element(parse_request_value(&request)?),
+            "wait_for_element",
+        )?,
+        "fill_input" => {
+            serialize_guest_result(fill_input(parse_request_value(&request)?), "fill_input")?
+        }
+        "wait_for_network_idle" => serialize_guest_result(
+            wait_for_network_idle(parse_request_value(&request)?),
+            "wait_for_network_idle",
+        )?,
         "press_key" => {
             serialize_guest_result(press_key(parse_request_value(&request)?), "press_key")?
         }
@@ -1736,14 +1973,15 @@ mod tests {
         cdp_raw_with_sender, click_with_sender, configure_downloads_with_sender,
         current_session_with_sender, current_tab_with_sender, daemon_read_timeout,
         dispatch_guest_operation, dispatch_key_with_sender, drain_events_with_sender,
-        ensure_real_tab_with_sender, get_cookies_with_sender, goto_with_sender,
-        handle_dialog_with_sender, http_get, iframe_target_with_sender, inject_daemon_name,
-        js_with_sender, list_tabs_with_sender, mouse_down_with_sender, mouse_move_with_sender,
-        mouse_up_with_sender, new_tab_with_sender, page_info_with_sender, press_key_with_sender,
-        print_pdf_with_sender, run_cli, screenshot_with_sender, scroll_with_sender,
-        serialize_guest_result, set_cookies_with_sender, set_viewport_with_sender,
-        switch_tab_with_sender, type_text_with_sender, upload_file_with_sender, wait,
-        wait_for_console_with_drain, wait_for_event_with_drain, wait_for_load_with_sender,
+        ensure_real_tab_with_sender, fill_input_with_sender, get_cookies_with_sender,
+        goto_with_sender, handle_dialog_with_sender, http_get, iframe_target_with_sender,
+        inject_daemon_name, js_with_sender, list_tabs_with_sender, mouse_down_with_sender,
+        mouse_move_with_sender, mouse_up_with_sender, new_tab_with_sender, page_info_with_sender,
+        press_key_with_sender, print_pdf_with_sender, run_cli, screenshot_with_sender,
+        scroll_with_sender, serialize_guest_result, set_cookies_with_sender,
+        set_viewport_with_sender, switch_tab_with_sender, type_text_with_sender,
+        upload_file_with_sender, wait, wait_for_console_with_drain, wait_for_element_with_sender,
+        wait_for_event_with_drain, wait_for_load_with_sender, wait_for_network_idle_with_drain,
         watch_events_collect_with_drain, watch_events_with_drain, DaemonResponse, GuestHostState,
         GuestRuntime, META_CLICK, META_CONFIGURE_DOWNLOADS, META_CURRENT_TAB, META_DISPATCH_KEY,
         META_DRAIN_EVENTS, META_ENSURE_REAL_TAB, META_GET_COOKIES, META_GOTO, META_HANDLE_DIALOG,
@@ -1763,14 +2001,15 @@ mod tests {
     use bh_wasm_host::{
         default_runner_config, CdpRawRequest, ClickRequest, ConfigureDownloadsRequest, CookieParam,
         CurrentSessionRequest, CurrentSessionResult, CurrentTabRequest, DispatchKeyRequest,
-        EnsureRealTabRequest, EventFilter, GetCookiesRequest, GotoRequest, GuestServeResponse,
-        HandleDialogRequest, HttpGetRequest, IframeTargetRequest, JsRequest, ListTabsRequest,
-        MouseDownRequest, MouseMoveRequest, MouseUpRequest, NewTabRequest, PageInfoRequest,
-        PressKeyRequest, PrintPdfRequest, RunnerConfig, ScreenshotRequest, ScrollRequest,
-        SetCookiesRequest, SetViewportRequest, SwitchTabRequest, TypeTextRequest,
-        UploadFileRequest, WaitForConsoleRequest, WaitForDialogRequest, WaitForEventRequest,
-        WaitForEventResult, WaitForLoadEventRequest, WaitForLoadRequest, WaitForRequestRequest,
-        WaitForResponseRequest, WaitRequest, WatchEventsLine, WatchEventsRequest,
+        EnsureRealTabRequest, EventFilter, FillInputRequest, GetCookiesRequest, GotoRequest,
+        GuestServeResponse, HandleDialogRequest, HttpGetRequest, IframeTargetRequest, JsRequest,
+        ListTabsRequest, MouseDownRequest, MouseMoveRequest, MouseUpRequest, NewTabRequest,
+        PageInfoRequest, PressKeyRequest, PrintPdfRequest, RunnerConfig, ScreenshotRequest,
+        ScrollRequest, SetCookiesRequest, SetViewportRequest, SwitchTabRequest, TypeTextRequest,
+        UploadFileRequest, WaitForConsoleRequest, WaitForDialogRequest, WaitForElementRequest,
+        WaitForEventRequest, WaitForEventResult, WaitForLoadEventRequest, WaitForLoadRequest,
+        WaitForNetworkIdleRequest, WaitForRequestRequest, WaitForResponseRequest, WaitRequest,
+        WatchEventsLine, WatchEventsRequest,
     };
     use serde_json::{json, Value};
 
@@ -2304,6 +2543,112 @@ mod tests {
     }
 
     #[test]
+    fn wait_for_element_polls_until_selector_exists() {
+        let mut calls = 0;
+        let result = wait_for_element_with_sender(
+            WaitForElementRequest {
+                daemon_name: "runner".to_string(),
+                selector: "#search".to_string(),
+                timeout: 1.0,
+                visible: true,
+            },
+            |daemon, request| {
+                calls += 1;
+                assert_eq!(daemon, "runner");
+                assert_eq!(request.meta.as_deref(), Some(META_JS));
+                let expression = request
+                    .params
+                    .as_ref()
+                    .and_then(|params| params.get("expression"))
+                    .and_then(Value::as_str)
+                    .expect("expression");
+                assert!(expression.contains("document.querySelector"));
+                assert!(expression.contains("#search"));
+                Ok(DaemonResponse {
+                    result: Some(json!(calls > 1)),
+                    ..DaemonResponse::default()
+                })
+            },
+        )
+        .expect("wait element result");
+
+        assert!(result);
+        assert_eq!(calls, 2);
+    }
+
+    #[test]
+    fn fill_input_focuses_clears_types_and_dispatches_events() {
+        let mut operations = Vec::new();
+        fill_input_with_sender(
+            FillInputRequest {
+                daemon_name: "runner".to_string(),
+                selector: "#search".to_string(),
+                text: "hello".to_string(),
+                clear_first: true,
+                timeout: 0.0,
+            },
+            |_, request| {
+                operations.push((request.meta.clone(), request.params.clone()));
+                Ok(DaemonResponse {
+                    result: Some(if request.meta.as_deref() == Some(META_JS) {
+                        json!(true)
+                    } else {
+                        Value::Null
+                    }),
+                    ..DaemonResponse::default()
+                })
+            },
+        )
+        .expect("fill input result");
+
+        assert_eq!(operations.len(), 3);
+        assert_eq!(operations[0].0.as_deref(), Some(META_JS));
+        assert_eq!(operations[1].0.as_deref(), Some(META_TYPE_TEXT));
+        assert_eq!(operations[2].0.as_deref(), Some(META_JS));
+        assert_eq!(
+            operations[1]
+                .1
+                .as_ref()
+                .and_then(|params| params.get("text"))
+                .and_then(Value::as_str),
+            Some("hello")
+        );
+    }
+
+    #[test]
+    fn wait_for_network_idle_tracks_request_lifecycle() {
+        let mut drains = VecDeque::from(vec![
+            Ok(vec![json!({
+                "method":"Network.requestWillBeSent",
+                "params":{"requestId":"1"},
+                "session_id":"session-1"
+            })]),
+            Ok(vec![json!({
+                "method":"Network.loadingFinished",
+                "params":{"requestId":"1"},
+                "session_id":"session-1"
+            })]),
+            Ok(vec![]),
+        ]);
+        let result = wait_for_network_idle_with_drain(
+            WaitForNetworkIdleRequest {
+                daemon_name: "stub".to_string(),
+                timeout: 1.0,
+                idle_ms: 1,
+            },
+            |_| {
+                Ok(CurrentSessionResult {
+                    session_id: Some("session-1".to_string()),
+                })
+            },
+            |_| drains.pop_front().unwrap_or_else(|| Ok(vec![])),
+        )
+        .expect("network idle result");
+
+        assert!(result);
+    }
+
+    #[test]
     fn daemon_read_timeout_extends_wait_for_load_timeout() {
         let timeout = daemon_read_timeout(&DaemonRequest {
             meta: Some(META_WAIT_FOR_LOAD.to_string()),
@@ -2618,6 +2963,7 @@ mod tests {
             ScreenshotRequest {
                 daemon_name: "runner".to_string(),
                 full: true,
+                max_dim: Some(900),
             },
             |daemon, request| {
                 assert_eq!(daemon, "runner");
@@ -2629,6 +2975,14 @@ mod tests {
                         .and_then(|params| params.get("full"))
                         .and_then(Value::as_bool),
                     Some(true)
+                );
+                assert_eq!(
+                    request
+                        .params
+                        .as_ref()
+                        .and_then(|params| params.get("max_dim"))
+                        .and_then(Value::as_u64),
+                    Some(900)
                 );
                 Ok(DaemonResponse {
                     result: Some(json!("cG5nLWJ5dGVz")),

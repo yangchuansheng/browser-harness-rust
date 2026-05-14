@@ -1,6 +1,6 @@
 # arXiv Bulk Harvest + Semantic Scholar — OAI-PMH & Citation Enrichment
 
-Companion to `../arxiv/skill.md`. Use the **arxiv** skill for search-and-fetch workflows. Use **this skill** when you need:
+Companion to `domain-skills/arxiv/scraping.md`. Use the **arxiv** skill for search-and-fetch workflows. Use **this skill** when you need:
 
 - Bulk-harvesting all papers in a subject area or date window (OAI-PMH)
 - Citation counts, influential-citation scores, and cross-database IDs (Semantic Scholar)
@@ -24,7 +24,7 @@ https://oaipmh.arxiv.org/oai
 
 ```text
 import xml.etree.ElementTree as ET
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 OAI_NS = {
     'oai': 'http://www.openarchives.org/OAI/2.0/',
@@ -137,7 +137,7 @@ Subset sets use `topic:topic:SUBCATEGORY` notation, e.g. `cs:cs:LG` for Machine 
 
 ```text
 import xml.etree.ElementTree as ET
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 RAW_NS = {
     'oai': 'http://www.openarchives.org/OAI/2.0/',
@@ -178,7 +178,7 @@ Base URL: `https://api.semanticscholar.org/graph/v1/`
 
 ```text
 import json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 paper = json.loads(http_get(
     "https://api.semanticscholar.org/graph/v1/paper/arXiv:1706.03762"
@@ -201,7 +201,7 @@ The ID format `arXiv:NNNN.NNNNN` is accepted directly — no conversion needed.
 
 ```text
 import json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 import urllib.request
 
 ids = ["arXiv:1706.03762", "arXiv:1810.04805", "arXiv:2005.14165"]
@@ -225,14 +225,13 @@ for p in results:
 # 2005.14165  (varies)  Language Models are Few-Shot Learners
 ```
 
-Note: `browser-harness http-get` only does GET. For POST use
-`urllib.request.Request` directly as above.
+Note: `helpers.http_get` only does GET. For POST use `urllib.request.Request` directly as above.
 
 ### Paper search
 
 ```text
 import json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 results = json.loads(http_get(
     "https://api.semanticscholar.org/graph/v1/paper/search"
@@ -298,7 +297,7 @@ download_pdf('1706.03762', '/tmp/attention.pdf')
 
 ## Gotchas
 
-- **OAI-PMH endpoint moved.** `https://export.arxiv.org/oai2` 301-redirects to `https://oaipmh.arxiv.org/oai`. Use the new URL. `browser-harness http-get` now goes through the Rust HTTP path, but you should still use the canonical endpoint directly instead of relying on redirects.
+- **OAI-PMH endpoint moved.** `https://export.arxiv.org/oai2` 301-redirects to `https://oaipmh.arxiv.org/oai`. Use the new URL. `helpers.http_get` (which uses `urllib`) does NOT follow redirects — you'll get an empty string or error. Either use `urllib.request.urlopen` with `follow_redirects` logic, or just use the canonical URL directly.
 
 - **OAI-PMH rate limit: 5 seconds between pages.** The protocol requires a `Retry-After` interval. The server embeds an `expirationDate` on the resumptionToken. Violating the rate limit causes the token to be invalidated and the harvest fails silently. Always `time.sleep(5)` between pages.
 
@@ -318,7 +317,7 @@ download_pdf('1706.03762', '/tmp/attention.pdf')
 
 - **OAI-PMH `set` param uses colon-separated hierarchy, not dot.** The Atom API uses `cat:cs.LG`; OAI-PMH uses `set=cs:cs:LG`. Using `set=cs.LG` returns zero results.
 
-- **Prefer the canonical OAI URL instead of relying on redirects.** The current `browser-harness http-get` path goes through the Rust HTTP client, but you should still use the canonical OAI endpoint directly rather than depending on redirect behavior.
+- **`http_get` in helpers.py does NOT follow HTTP redirects.** If you must use it with the old OAI URL, you'll get an empty body. Either update the URL to the canonical one or use `urllib.request.urlopen` with a redirect handler.
 
 ---
 

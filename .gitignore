@@ -21,3 +21,4 @@ coverage/
 dist/
 target/
 rust/target/
+.claude/

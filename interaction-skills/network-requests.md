@@ -12,9 +12,11 @@ silently.
    request, even if the response may fail or does not matter yet.
 3. Use `wait_for_response` when backend success matters and you need to assert
    status or the final response URL.
-4. Use `watch_events` when you do not yet know the exact URL or when you need
+4. Use `wait_for_network_idle` after SPA submits or route transitions when the
+   exact request URL is not yet important but all in-flight work must settle.
+5. Use `watch_events` when you do not yet know the exact URL or when you need
    to see the whole burst of activity around an action.
-5. Treat raw event draining as a discovery fallback, not the normal path.
+6. Treat raw event draining as a discovery fallback, not the normal path.
 
 ## Public HTTP First
 
@@ -54,11 +56,13 @@ The current Rust runner path already supports this:
 - `bhrun wait-for-console`
 - `browser-harness wait-for-request`
 - `browser-harness wait-for-response`
+- `browser-harness wait-for-network-idle`
 - `browser-harness watch-events`
 - `bh_guest_sdk::wait_for_event(...)`
 - `bh_guest_sdk::watch_events(...)`
 - `bh_guest_sdk::wait_for_request(...)` for Rust/Wasm guests
 - `bh_guest_sdk::wait_for_response(...)` for Rust/Wasm guests
+- `bh_guest_sdk::wait_for_network_idle(...)` for Rust/Wasm guests
 - `bh_guest_sdk::wait_for_console(...)` for Rust/Wasm guests
 
 The repository acceptance runner for the full two-process pattern is:

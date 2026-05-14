@@ -3,27 +3,6 @@
 Field-tested against open.spotify.com on 2026-04-18.
 No authentication required for any approach documented here.
 
-## Rust-native paths
-
-For oEmbed and page-source HTTP reads, use the installed Rust CLI:
-
-```bash
-browser-harness http-get <<'JSON'
-{"url":"https://open.spotify.com/oembed?url=https://open.spotify.com/track/4PTG3Z6ehGkBFwjybzWkR8","timeout":20.0}
-JSON
-```
-
-For in-browser search extraction, use the guest. This assumes a live browser
-daemon is already attached:
-
-```bash
-cd rust
-cargo +stable build --release --target wasm32-unknown-unknown --manifest-path guests/rust-spotify-search/Cargo.toml
-cargo run --quiet --bin bhrun -- run-guest guests/rust-spotify-search/target/wasm32-unknown-unknown/release/rust_spotify_search_guest.wasm <<'JSON'
-{"daemon_name":"default","guest_module":"guests/rust-spotify-search/target/wasm32-unknown-unknown/release/rust_spotify_search_guest.wasm","granted_operations":["ensure_real_tab","goto","wait_for_load","wait","page_info","js"],"allow_http":false,"allow_raw_cdp":false,"persistent_guest_state":true}
-JSON
-```
-
 ---
 
 ## Approach 1 (Fastest): oEmbed API — No Auth, No Browser
@@ -33,7 +12,7 @@ JSON
 Returns JSON in ~0.25s. Works for tracks, albums, playlists, and artists. Does **not** work for episodes/shows.
 
 ```text
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 import json
 
 def spotify_oembed(resource_type, resource_id):
@@ -82,7 +61,7 @@ pl = spotify_oembed("playlist", "37i9dQZF1DXcBWIGoYBM5M")
 ```text
 from concurrent.futures import ThreadPoolExecutor
 import json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 track_ids = [
     "4PTG3Z6ehGkBFwjybzWkR8",
@@ -111,7 +90,7 @@ Every open.spotify.com page (track, album, playlist, artist) serves full HTML wi
 ### Track page — all extractable fields
 
 ```text
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 import json, re
 
 def scrape_track(track_id):
@@ -203,7 +182,7 @@ def scrape_artist(artist_id):
 `https://open.spotify.com/embed/{type}/{id}` returns a small Next.js SSR page. Its `__NEXT_DATA__` script tag contains a fully-parsed entity object. This is the only no-auth route that returns track listings for albums, playlists, and artists.
 
 ```text
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 import json, re
 
 def scrape_embed(resource_type, resource_id):
@@ -311,7 +290,7 @@ The following are **not accessible** via http_get and require the CDP browser:
 If browser access is needed for search:
 
 ```text
-goto("https://open.spotify.com/search")
+goto_url("https://open.spotify.com/search")
 wait_for_load()
 wait(2)
 # Type into the search box

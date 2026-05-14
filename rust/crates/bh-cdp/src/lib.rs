@@ -40,9 +40,15 @@ impl CdpClient {
     ) -> Result<(Self, mpsc::UnboundedReceiver<CdpEvent>), String> {
         let endpoint = endpoint.into();
         let (stream, _) = connect_async(endpoint.as_str()).await.map_err(|err| {
-            format!(
-                "CDP WS handshake failed: {err} -- click Allow in Chrome if prompted, then retry"
-            )
+            if endpoint.starts_with("wss://") || std::env::var_os("BU_CDP_WS").is_some() {
+                format!(
+                    "CDP WS handshake failed: {err} -- remote browser WebSocket connection failed. This can happen when network policy blocks the connection, the WS URL is wrong or expired, or the remote endpoint is down. If you use Browser Use cloud, verify BROWSER_USE_API_KEY and get a fresh URL."
+                )
+            } else {
+                format!(
+                    "CDP WS handshake failed: {err} -- click Allow in Chrome if prompted, then retry"
+                )
+            }
         })?;
         let (writer, mut reader) = stream.split();
         let pending = Arc::new(Mutex::new(HashMap::new()));

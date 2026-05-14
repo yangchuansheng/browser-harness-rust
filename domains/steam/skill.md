@@ -8,7 +8,7 @@ The `appdetails` endpoint is the primary source for all game data. No API key, n
 
 ```text
 import json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def get_app(appid, cc="US"):
     """
@@ -120,7 +120,7 @@ get_app(292030, cc="DE")["price_overview"]
 ```text
 import json
 from concurrent.futures import ThreadPoolExecutor
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def fetch_game(appid, cc="US"):
     resp = http_get(
@@ -283,7 +283,7 @@ def get_store_page(appid):
 
 ```text
 import json, urllib.parse
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def search_games(term, cc="US", lang="english"):
     """
@@ -327,7 +327,7 @@ results = search_games("witcher")
 
 ```text
 import json, urllib.parse
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def get_reviews(appid, num=10, language="english", filter="recent",
                 review_type="all", purchase_type="all", cursor="*"):
@@ -409,7 +409,7 @@ review["author"]["last_played"]          # Unix timestamp
 
 ```text
 import urllib.parse, json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def get_all_reviews(appid, max_pages=5, num_per_page=100, language="all"):
     """Paginate through reviews using cursor."""
@@ -440,7 +440,7 @@ def get_all_reviews(appid, max_pages=5, num_per_page=100, language="all"):
 
 ```text
 import json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 data = json.loads(http_get("https://store.steampowered.com/api/featured/"))
 # data["large_capsules"]  -> 1-3 hero banner items
@@ -505,7 +505,7 @@ The `ISteamApps/GetAppList` API endpoint (v1, v2, v0001, v0002) currently return
 ```text
 # Discover appids from top sellers + new releases
 import json
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def get_all_store_appids():
     data = json.loads(http_get("https://store.steampowered.com/api/featuredcategories/"))

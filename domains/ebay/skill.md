@@ -1,6 +1,6 @@
 # eBay — Scraping & Data Extraction
 
-Field-tested against ebay.com on 2026-04-18 using Rust CLI-equivalent helper calls with `http_get`.
+Field-tested against ebay.com on 2026-04-18 using `uv run python` with `http_get`.
 Chrome is NOT required — `http_get` returns full HTML on first access.
 
 ## Critical: Bot Detection ("Pardon Our Interruption")
@@ -182,7 +182,7 @@ def extract_search_results(html):
 
 **Usage:**
 ```text
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 import re
 
 HEADERS = {
@@ -373,7 +373,7 @@ in a session, eBay returns "Pardon Our Interruption" for all subsequent requests
 
 ```text
 import re, json, time
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",

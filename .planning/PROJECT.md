@@ -36,7 +36,7 @@ The Rust implementation must preserve behavior parity with upstream Browser Harn
 
 ## Context
 
-- Current repo: `/Users/longnv/.codex/worktrees/35df/browser-harness-rust`
+- Current repo: the current worktree
 - Upstream repo: `https://github.com/browser-use/browser-harness`
 - Baseline date: 2026-04-21
 - Selected strategy: full behavior sync. Review all upstream commits since the baseline and migrate applicable updates.

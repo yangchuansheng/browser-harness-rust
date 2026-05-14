@@ -136,7 +136,7 @@ URL pattern: `https://{city}.craigslist.org/{area}/{category_code}/d/{slug}/{pos
 
 ```text
 import re
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 def search_craigslist(city, category, query, min_price=None, max_price=None):
     params = f"query={query.replace(' ', '+')}&sort=rel"
@@ -284,7 +284,7 @@ structured data (price as float, geo coordinates) without regex parsing of HTML:
 
 ```text
 import json, re
-# helper-style example: map these calls to browser-harness / bhrun or a guest
+from helpers import http_get
 
 html = http_get("https://sfbay.craigslist.org/search/sss?query=laptop", headers={"User-Agent": "Mozilla/5.0"})
 ld_blocks = re.findall(r'<script type="application/ld\+json"[^>]*>(.*?)</script>', html, re.DOTALL)
@@ -329,7 +329,7 @@ over_500  = search_craigslist("sfbay", "sss", "macbook", min_price=501)
 ```
 
 If true pagination is required (e.g. you need more than 350 results), you must use a browser session
-with `goto()` + `wait_for_load()`.
+with `goto_url()` + `wait_for_load()`.
 
 ## Bot detection
 

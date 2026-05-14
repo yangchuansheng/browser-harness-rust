@@ -2,26 +2,6 @@
 
 Field-tested against metacritic.com on 2026-04-18. All code blocks validated with live requests.
 
-## Rust-native paths
-
-For a direct backend fetch, use the installed Rust CLI:
-
-```bash
-browser-harness http-get <<'JSON'
-{"url":"https://backend.metacritic.com/games/metacritic/the-last-of-us/web?componentName=product&componentType=Product&apiKey=1MOZgmNFxvmljaQR1X9KAij9Mo4xAY3u","timeout":20.0}
-JSON
-```
-
-For the packaged two-call score workflow, run the guest:
-
-```bash
-cd rust
-cargo +stable build --release --target wasm32-unknown-unknown --manifest-path guests/rust-metacritic-game-scores/Cargo.toml
-cargo run --quiet --bin bhrun -- run-guest guests/rust-metacritic-game-scores/target/wasm32-unknown-unknown/release/rust_metacritic_game_scores_guest.wasm <<'JSON'
-{"daemon_name":"default","guest_module":"guests/rust-metacritic-game-scores/target/wasm32-unknown-unknown/release/rust_metacritic_game_scores_guest.wasm","granted_operations":["http_get"],"allow_http":true,"allow_raw_cdp":false,"persistent_guest_state":true}
-JSON
-```
-
 ## Do this first
 
 **Use the backend API — it returns clean JSON with both scores in one call, no HTML parsing.**
