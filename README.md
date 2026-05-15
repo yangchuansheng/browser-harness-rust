@@ -120,9 +120,14 @@ Notable parity points:
 - split `BH_RUNTIME_DIR` for sockets/pids from `BH_TMP_DIR` for logs/screenshots
 - daemon liveness/status metadata and the 🐴 controlled-tab marker
 - helper operations: `wait-for-element`, `fill-input`, `wait-for-network-idle`,
-  and screenshot `max_dim`
+  screenshot `max_dim`, and remote-browser file upload staging
 - imported upstream domain skills under `domains/` and issue templates under
   `.github/ISSUE_TEMPLATE/`
+
+Want the deployed version: a 24/7 Linux box agent with Telegram control and a
+persistent cloud browser? See
+[`browser-use/bux`](https://github.com/browser-use/bux) and
+[watch the demo](https://www.tiktok.com/@browser_use/video/7639824093721758989).
 
 ## Quick Start
 

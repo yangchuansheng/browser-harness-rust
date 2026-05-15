@@ -191,6 +191,13 @@ These are the stable browser operations guests use most often:
 - input helpers such as click, scroll, type, and keys
 - viewport, screenshot, PDF, upload, cookies, and download configuration
 
+For upload workflows, guests can pass browser-visible paths with
+`bh_guest_sdk::upload_file(...)` or in-memory payloads with
+`bh_guest_sdk::upload_file_data(...)` / `upload_remote_files(...)`. Payloads are
+staged into the browser host before `DOM.setFileInputFiles`, which keeps remote
+browser uploads usable without assuming the browser can read the agent's local
+filesystem.
+
 ### Host utilities
 
 These are runner-owned utilities that are useful but not page-specific:

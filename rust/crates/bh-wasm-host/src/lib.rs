@@ -439,6 +439,16 @@ pub struct UploadFileRequest {
     pub files: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub remote_files: Option<Vec<RemoteUploadFile>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RemoteUploadFile {
+    pub name: String,
+    pub data_base64: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mime_type: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -966,6 +976,7 @@ impl Default for UploadFileRequest {
             selector: String::new(),
             files: Vec::new(),
             target_id: None,
+            remote_files: None,
         }
     }
 }
@@ -1409,6 +1420,7 @@ impl UploadFileRequest {
             selector: self.selector.clone(),
             files: self.files.clone(),
             target_id: self.target_id.clone(),
+            remote_files: self.remote_files.clone().filter(|files| !files.is_empty()),
         }
     }
 }
@@ -1936,7 +1948,7 @@ pub fn default_operations() -> Vec<HostOperation> {
         ),
         compatibility_helper(
             META_UPLOAD_FILE,
-            "Assign files to an input element in the current page or iframe target.",
+            "Assign local or pre-staged remote files to an input element in the current page or iframe target.",
         ),
         compatibility_helper(
             META_GET_COOKIES,
@@ -2388,11 +2400,12 @@ mod tests {
         EnsureRealTabRequest, EventFilter, ExecutionModel, GetCookiesRequest, GotoRequest,
         GuestTransport, HandleDialogRequest, HttpGetRequest, IframeTargetRequest, JsRequest,
         ListTabsRequest, MouseDownRequest, MouseMoveRequest, MouseUpRequest, NewTabRequest,
-        PageInfoRequest, PressKeyRequest, PrintPdfRequest, ProtocolFamilyKind, ScreenshotRequest,
-        ScrollRequest, SetCookiesRequest, SetViewportRequest, Stability, SwitchTabRequest,
-        TypeTextRequest, UploadFileRequest, WaitForConsoleRequest, WaitForDialogRequest,
-        WaitForDownloadRequest, WaitForEventRequest, WaitForLoadEventRequest, WaitForLoadRequest,
-        WaitForRequestRequest, WaitForResponseRequest, WatchEventsLine, WatchEventsRequest,
+        PageInfoRequest, PressKeyRequest, PrintPdfRequest, ProtocolFamilyKind, RemoteUploadFile,
+        ScreenshotRequest, ScrollRequest, SetCookiesRequest, SetViewportRequest, Stability,
+        SwitchTabRequest, TypeTextRequest, UploadFileRequest, WaitForConsoleRequest,
+        WaitForDialogRequest, WaitForDownloadRequest, WaitForEventRequest, WaitForLoadEventRequest,
+        WaitForLoadRequest, WaitForRequestRequest, WaitForResponseRequest, WatchEventsLine,
+        WatchEventsRequest,
     };
     use std::collections::BTreeMap;
 
@@ -2932,6 +2945,11 @@ mod tests {
             selector: "#file".to_string(),
             files: vec!["/tmp/example.txt".to_string()],
             target_id: Some("iframe-1".to_string()),
+            remote_files: Some(vec![RemoteUploadFile {
+                name: "example.txt".to_string(),
+                data_base64: "aGVsbG8=".to_string(),
+                mime_type: Some("text/plain".to_string()),
+            }]),
         };
         let normalized = request.normalized();
 
@@ -2939,6 +2957,9 @@ mod tests {
         assert_eq!(normalized.selector, "#file");
         assert_eq!(normalized.files, vec!["/tmp/example.txt".to_string()]);
         assert_eq!(normalized.target_id.as_deref(), Some("iframe-1"));
+        let remote_files = normalized.remote_files.expect("remote files");
+        assert_eq!(remote_files[0].name, "example.txt");
+        assert_eq!(remote_files[0].mime_type.as_deref(), Some("text/plain"));
     }
 
     #[test]

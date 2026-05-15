@@ -12,4 +12,5 @@ bh-remote = { path = "../bh-remote" }
 image = { version = "0.25", default-features = false, features = ["png"] }
 libc.workspace = true
 serde_json.workspace = true
+sha2 = "0.10"
 tokio.workspace = true

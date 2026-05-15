@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `2f22ed6709748edc5eab733eae099802640a78e2`
+- Upstream target commit: `caebe67fc780482bc9c57e88872f62cdb5a9b42d`
 - Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..upstream/main`
-- Count: 239 commits
+- Count: 243 commits
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -32,6 +32,7 @@
 - Added screenshot `max_dim` support with Rust PNG resize behavior.
 - Exposed the new operations through `bhrun`, `browser-harness`, `bh-wasm-host`,
   and `bh_guest_sdk`.
+- Added remote-browser upload staging parity from upstream commits `f226972`/`e87f8b7`: local files are staged into `/tmp/browser-harness-uploads` inside the browser host before `DOM.setFileInputFiles`; WASM guests can provide base64 upload payloads through `upload_file_data` / `upload_remote_files`.
 
 ## Migrated Knowledge and Docs
 
@@ -41,6 +42,8 @@
 - Imported `docs/snap-linux-headless.md` and `docs/allow-remote-debugging.png`.
 - Updated `SKILL.md`, `install.md`, `README.md`, `domains/README.md`, and
   interaction skills for upstream connection and helper guidance.
+- Linked the upstream Browser Use Box deployment demo in `README.md`.
+- Updated upload and WASM guest docs for remote-browser staging behavior.
 
 ## Adapted Instead of Copied
 
@@ -74,3 +77,28 @@
 - `git fetch upstream main` confirmed target `2f22ed6709748edc5eab733eae099802640a78e2`.
 - Domain mapping script reported `upstream domain file entries 109` and `missing mapped files 0`.
 - Re-ran Rust formatting, check, tests, CLI smoke, diff whitespace check, and secret/local-path scans after the Amazon fix. The repository `scripts/scan_sensitive.sh` requires Bash 4 `mapfile`; macOS `/bin/bash` is 3.2 in this worktree, so an equivalent Python/rg scan was used for the final secret/local-path pass.
+
+
+## Daily Upstream Sync — 2026-05-15
+
+- Fetched `origin/main` and `upstream/main`; local `main` started clean and equal to `origin/main`.
+- Previous target: `2f22ed6709748edc5eab733eae099802640a78e2`; new upstream target: `caebe67fc780482bc9c57e88872f62cdb5a9b42d`.
+- New upstream range `2f22ed6709748edc5eab733eae099802640a78e2..upstream/main`: 4 commits.
+- Upstream changes analyzed:
+  - `f226972` / PR `e87f8b7`: remote-browser file upload staging in Python helpers plus unit tests.
+  - `bdd550b` / PR `caebe67`: Browser Use Box deployment-demo README link.
+- Rust migration decisions:
+  - Ported remote upload staging into `bh-daemon` instead of copying Python runtime files. The daemon now detects remote CDP sessions from `BU_BROWSER_ID` or non-loopback `BU_CDP_WS` / `BU_CDP_URL`, stages local files through browser downloads, then resolves a fresh file input before `DOM.setFileInputFiles`.
+  - Added `remote_files` payload support to the typed `UploadFileRequest` and guest SDK helpers for in-memory/base64 upload data.
+  - Preserved local-browser behavior: local uploads still pass local paths directly unless remote staging is enabled.
+  - Updated `README.md`, `interaction-skills/uploads.md`, and `docs/wasm-guests.md` for the new behavior and upstream Browser Use Box link.
+
+## Daily Sync Verification Evidence — 2026-05-15
+
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check` passed.
+- `cargo check --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary` passed and reports `upload_file=live`.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed and exposes `upload-file` through the facade.
+- `git diff --check` passed.
+- `./scripts/scan_sensitive.sh` still fails on macOS Bash 3.2 because it uses Bash 4 `mapfile`; an equivalent Python scan over tracked/unignored files passed with no obvious secrets or local path leaks.

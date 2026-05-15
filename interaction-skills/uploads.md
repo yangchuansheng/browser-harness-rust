@@ -41,12 +41,18 @@ Use `upload-file` when:
 - the site uses a hidden real file input behind a styled button
 - the page expects the browser file picker result, not typed text
 - you need the selected file to appear in `input.files`
+- the active browser is remote: the daemon stages local files into
+  `/tmp/browser-harness-uploads` inside the browser host before calling
+  `DOM.setFileInputFiles`
 
 Do not use it for:
 
 - drag-and-drop file zones that never expose a file input
 - normal text fields
-- remote-browser cases where the browser process cannot see your local file path
+
+For WASM guests that already hold file bytes, prefer `bh_guest_sdk::upload_file_data`
+or `upload_remote_files`; the host stages the base64 payload into the browser
+before selecting it.
 
 ## Verification
 

@@ -1296,6 +1296,13 @@ where
     if let Some(target_id) = request.target_id {
         params.insert("target_id".to_string(), Value::String(target_id));
     }
+    if let Some(remote_files) = request.remote_files {
+        params.insert(
+            "remote_files".to_string(),
+            serde_json::to_value(remote_files)
+                .map_err(|err| format!("serialize remote upload files: {err}"))?,
+        );
+    }
     typed_meta_result_with_sender(
         &request.daemon_name,
         META_UPLOAD_FILE,
@@ -1990,6 +1997,7 @@ mod tests {
         META_SCREENSHOT, META_SCROLL, META_SESSION, META_SET_COOKIES, META_SET_VIEWPORT,
         META_SWITCH_TAB, META_TYPE_TEXT, META_UPLOAD_FILE, META_WAIT_FOR_LOAD,
     };
+    use bh_wasm_host::RemoteUploadFile;
     use std::collections::BTreeMap;
     use std::collections::VecDeque;
     use std::io::{self, Read, Write};
@@ -3158,6 +3166,11 @@ mod tests {
                 selector: "#file".to_string(),
                 files: vec!["/tmp/one.txt".to_string(), "/tmp/two.txt".to_string()],
                 target_id: Some("iframe-1".to_string()),
+                remote_files: Some(vec![RemoteUploadFile {
+                    name: "remote.txt".to_string(),
+                    data_base64: "aGVsbG8=".to_string(),
+                    mime_type: Some("text/plain".to_string()),
+                }]),
             },
             |daemon, request| {
                 assert_eq!(daemon, "runner");
@@ -3193,6 +3206,14 @@ mod tests {
                         .and_then(|params| params.get("target_id"))
                         .and_then(Value::as_str),
                     Some("iframe-1")
+                );
+                assert_eq!(
+                    request
+                        .params
+                        .as_ref()
+                        .and_then(|params| params.pointer("/remote_files/0/name"))
+                        .and_then(Value::as_str),
+                    Some("remote.txt")
                 );
                 Ok(DaemonResponse {
                     result: Some(Value::Null),
