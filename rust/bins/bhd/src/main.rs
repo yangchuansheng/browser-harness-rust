@@ -13,13 +13,6 @@ async fn main() {
     config.browser_use_api_key = std::env::var("BROWSER_USE_API_KEY")
         .ok()
         .filter(|value| !value.is_empty());
-    config.remote_file_staging = config.remote_browser_id.is_some()
-        || std::env::var("BU_CDP_WS")
-            .or_else(|_| std::env::var("BU_CDP_URL"))
-            .ok()
-            .and_then(|value| remote_cdp_host(&value))
-            .map(|host| !is_loopback_host(&host))
-            .unwrap_or(false);
     let paths = config.paths();
 
     if already_running(&config) {
@@ -64,24 +57,4 @@ async fn main() {
         eprintln!("{err}");
         std::process::exit(1);
     }
-}
-
-fn remote_cdp_host(url: &str) -> Option<String> {
-    let without_scheme = url.split_once("://").map(|(_, rest)| rest).unwrap_or(url);
-    let authority = without_scheme.split('/').next().unwrap_or(without_scheme);
-    if let Some(rest) = authority.strip_prefix('[') {
-        return rest.split_once(']').map(|(host, _)| host.to_string());
-    }
-    Some(
-        authority
-            .rsplit_once(':')
-            .map_or(authority, |(host, _)| host)
-            .to_string(),
-    )
-    .filter(|host| !host.is_empty())
-}
-
-fn is_loopback_host(host: &str) -> bool {
-    let host = host.trim_matches(['[', ']']).to_ascii_lowercase();
-    matches!(host.as_str(), "localhost" | "127.0.0.1" | "::1")
 }

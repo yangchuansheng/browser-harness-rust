@@ -3,8 +3,8 @@ use std::fmt;
 
 pub use bh_wasm_host::{
     CookieParam, CookieRecord, CurrentSessionResult, EventFilter, FillInputRequest, HttpGetRequest,
-    NewTabResult, RemoteUploadFile, SwitchTabResult, TabSummary, WaitForElementRequest,
-    WaitForEventResult, WaitForNetworkIdleRequest, WaitResult, WatchEventsLine,
+    NewTabResult, SwitchTabResult, TabSummary, WaitForElementRequest, WaitForEventResult,
+    WaitForNetworkIdleRequest, WaitResult, WatchEventsLine,
 };
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -364,42 +364,6 @@ where
     )
 }
 
-pub fn upload_file_data(
-    selector: &str,
-    name: &str,
-    data_base64: &str,
-    mime_type: Option<&str>,
-    target_id: Option<&str>,
-) -> Result<(), GuestError> {
-    call_json(
-        "upload_file",
-        &json!({
-            "selector": selector,
-            "remote_files": [{
-                "name": name,
-                "data_base64": data_base64,
-                "mime_type": mime_type,
-            }],
-            "target_id": target_id,
-        }),
-    )
-}
-
-pub fn upload_remote_files(
-    selector: &str,
-    remote_files: &[RemoteUploadFile],
-    target_id: Option<&str>,
-) -> Result<(), GuestError> {
-    call_json(
-        "upload_file",
-        &json!({
-            "selector": selector,
-            "remote_files": remote_files,
-            "target_id": target_id,
-        }),
-    )
-}
-
 pub fn get_cookies(urls: Option<Vec<String>>) -> Result<Vec<CookieRecord>, GuestError> {
     call_json(
         "get_cookies",
@@ -629,11 +593,11 @@ mod tests {
         call_json_with, cdp_raw, click, configure_downloads, current_session, current_tab,
         dispatch_key, ensure_real_tab, get_cookies, goto, handle_dialog, http_get, iframe_target,
         js, list_tabs, mouse_down, mouse_move, mouse_up, new_tab, page_info, press_key, print_pdf,
-        screenshot, scroll, set_cookies, set_viewport, switch_tab, type_text, upload_file,
-        upload_file_data, upload_remote_files, wait, wait_for_console, wait_for_dialog,
-        wait_for_download, wait_for_event, wait_for_load, wait_for_load_event, wait_for_request,
-        wait_for_response, watch_events, CurrentSessionResult, GuestError, NewTabResult,
-        SwitchTabResult, TabSummary, WaitResult, WatchEventsLine,
+        screenshot, scroll, set_cookies, set_viewport, switch_tab, type_text, upload_file, wait,
+        wait_for_console, wait_for_dialog, wait_for_download, wait_for_event, wait_for_load,
+        wait_for_load_event, wait_for_request, wait_for_response, watch_events,
+        CurrentSessionResult, GuestError, NewTabResult, SwitchTabResult, TabSummary, WaitResult,
+        WatchEventsLine,
     };
     use bh_wasm_host::WaitForEventResult;
     use serde_json::{json, Value};
@@ -1161,45 +1125,6 @@ mod tests {
         )
         .expect("upload file result");
         assert_eq!(upload_result, ());
-
-        let remote_upload_result: () = call_json_with(
-            |operation, request, output| {
-                assert_eq!(operation, b"upload_file");
-                let request: Value = serde_json::from_slice(request).expect("parse request");
-                assert_eq!(
-                    request
-                        .pointer("/remote_files/0/name")
-                        .and_then(Value::as_str),
-                    Some("demo.txt")
-                );
-                assert_eq!(
-                    request
-                        .pointer("/remote_files/0/data_base64")
-                        .and_then(Value::as_str),
-                    Some("aGVsbG8=")
-                );
-                assert_eq!(
-                    request
-                        .pointer("/remote_files/0/mime_type")
-                        .and_then(Value::as_str),
-                    Some("text/plain")
-                );
-                let response = serde_json::to_vec(&Value::Null).expect("serialize");
-                output[..response.len()].copy_from_slice(&response);
-                response.len() as i32
-            },
-            "upload_file",
-            &json!({
-                "selector":"#file",
-                "remote_files":[{
-                    "name":"demo.txt",
-                    "data_base64":"aGVsbG8=",
-                    "mime_type":"text/plain"
-                }]
-            }),
-        )
-        .expect("remote upload file result");
-        assert_eq!(remote_upload_result, ());
 
         let cookies_result: Vec<bh_wasm_host::CookieRecord> = call_json_with(
             |operation, request, output| {
@@ -1744,8 +1669,6 @@ mod tests {
         let _ = screenshot;
         let _ = handle_dialog;
         let _ = upload_file::<Vec<&str>, &str>;
-        let _ = upload_file_data;
-        let _ = upload_remote_files;
         let _ = get_cookies;
         let _ = set_cookies;
         let _ = configure_downloads;

@@ -102,3 +102,30 @@
 - `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed and exposes `upload-file` through the facade.
 - `git diff --check` passed.
 - `./scripts/scan_sensitive.sh` still fails on macOS Bash 3.2 because it uses Bash 4 `mapfile`; an equivalent Python scan over tracked/unignored files passed with no obvious secrets or local path leaks.
+
+## Daily Upstream Sync — 2026-05-17
+
+- Fetched `upstream/main` and reviewed upstream ancestry after the prior sync target.
+- Previous target: `caebe67fc780482bc9c57e88872f62cdb5a9b42d`; new upstream target: `9e47d2b7775404094e977d3297d8a41e09f73a81`.
+- New upstream range `caebe67fc780482bc9c57e88872f62cdb5a9b42d..9e47d2b7775404094e977d3297d8a41e09f73a81`: 4 non-merge commits, plus merge commits on `upstream/main`.
+- Upstream changes analyzed:
+  - `f2dca2b`: added `llms.txt` with Browser Use Box discovery link.
+  - `87fe826`: reverted the Browser Use Box deployment-demo README link.
+  - `93ce332`: reverted `llms.txt`.
+  - `1599ba1`: reverted remote-browser upload staging from Python helpers and removed related tests.
+- Net upstream effect: `llms.txt` add/revert cancels out; the durable changes are two effective reverts.
+- Rust migration decisions:
+  - Removed the Rust port of remote-browser upload staging from `bh-daemon`; `upload_file` again passes the caller-supplied file paths directly to `DOM.setFileInputFiles`.
+  - Removed `remote_files` from `UploadFileRequest`, `bhrun` request forwarding, `bh-wasm-host`, and `bh_guest_sdk`.
+  - Removed guest SDK in-memory/base64 upload helpers (`upload_file_data` and `upload_remote_files`) because upstream reverted that behavior.
+  - Removed daemon remote-staging detection from `bhd` and the `sha2` dependency that only supported staged upload filenames.
+  - Removed the Browser Use Box deployment-demo link from `README.md`; no `llms.txt` file is present after the upstream add/revert pair.
+  - Updated `interaction-skills/uploads.md` and `docs/wasm-guests.md` so upload guidance matches simple path passing again.
+
+## Daily Sync Verification Evidence — 2026-05-17
+
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check` passed.
+- `cargo check --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed.
+- `git diff --check` passed.
+- `python3` tracked-file secret scan plus `rg` checks passed with no obvious secrets, local home paths, `llms.txt`, Browser Use Box demo link, `remote_files`, or remote upload staging remnants in active code/docs.

@@ -3,7 +3,6 @@ use std::fs::{self, File};
 use std::io::{Cursor, ErrorKind, Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;
-use std::path::Path;
 use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
@@ -21,7 +20,6 @@ use bh_protocol::{
 };
 use bh_remote::BrowserUseClient;
 use serde_json::{json, Value};
-use sha2::{Digest, Sha256};
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::{UnixListener, UnixStream as TokioUnixStream};
 use tokio::sync::{mpsc, watch, Mutex};
@@ -31,20 +29,12 @@ pub const DEFAULT_EVENT_CAPACITY: usize = 500;
 const MARK_JS: &str =
     "const m=String.fromCodePoint(0x1F434);if(!document.title.startsWith(m))document.title=m+' '+document.title";
 
-#[derive(Debug, Clone)]
-struct RemoteUploadFile {
-    name: String,
-    data_base64: String,
-    mime_type: Option<String>,
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DaemonConfig {
     pub name: String,
     pub event_capacity: usize,
     pub remote_browser_id: Option<String>,
     pub browser_use_api_key: Option<String>,
-    pub remote_file_staging: bool,
 }
 
 impl DaemonConfig {
@@ -54,7 +44,6 @@ impl DaemonConfig {
             event_capacity: DEFAULT_EVENT_CAPACITY,
             remote_browser_id: None,
             browser_use_api_key: None,
-            remote_file_staging: false,
         }
     }
 
@@ -792,187 +781,6 @@ impl Daemon {
         Ok(Value::Null)
     }
 
-    async fn stage_file_for_upload(&self, path: &str, timeout: Duration) -> Result<String, String> {
-        let local = Path::new(path);
-        if !local.is_file() {
-            return Ok(path.to_string());
-        }
-
-        let bytes = fs::read(local).map_err(|err| format!("read upload file {path}: {err}"))?;
-        let filename = local
-            .file_name()
-            .and_then(|name| name.to_str())
-            .ok_or_else(|| format!("upload file path has no UTF-8 filename: {path}"))?;
-        let remote_name = format!(
-            "bh-{}-{}",
-            short_sha256_hex(&bytes),
-            sanitize_upload_filename(filename)
-        );
-        let encoded = encode_base64_standard(&bytes);
-        self.stage_upload_bytes(
-            &remote_name,
-            &encoded,
-            guess_mime_type(filename),
-            bytes.len() as u64,
-            timeout,
-        )
-        .await?;
-        Ok(format!("/tmp/browser-harness-uploads/{remote_name}"))
-    }
-
-    async fn stage_remote_file_for_upload(
-        &self,
-        file: &RemoteUploadFile,
-        timeout: Duration,
-    ) -> Result<String, String> {
-        let bytes = decode_base64_standard(&file.data_base64)
-            .map_err(|err| format!("decode remote upload file {}: {err}", file.name))?;
-        let remote_name = format!(
-            "bh-{}-{}",
-            short_sha256_hex(&bytes),
-            sanitize_upload_filename(&file.name)
-        );
-        let mime_type = file
-            .mime_type
-            .as_deref()
-            .filter(|value| !value.trim().is_empty())
-            .unwrap_or_else(|| guess_mime_type(&file.name));
-        let encoded = encode_base64_standard(&bytes);
-
-        self.stage_upload_bytes(
-            &remote_name,
-            &encoded,
-            mime_type,
-            bytes.len() as u64,
-            timeout,
-        )
-        .await?;
-        Ok(format!("/tmp/browser-harness-uploads/{remote_name}"))
-    }
-
-    async fn stage_upload_bytes(
-        &self,
-        remote_name: &str,
-        encoded: &str,
-        mime_type: &str,
-        expected_size: u64,
-        timeout: Duration,
-    ) -> Result<(), String> {
-        let target_dir = "/tmp/browser-harness-uploads";
-        self.configure_downloads_result(target_dir).await?;
-        self.drain_events().await;
-
-        let session_id = self.ensure_session().await?;
-        self.send_with_retry(
-            "Runtime.evaluate",
-            json!({
-                "expression": "window.__bh_upload_chunks=[]",
-                "returnByValue": true,
-                "awaitPromise": true
-            }),
-            Some(session_id.clone()),
-        )
-        .await?;
-
-        for chunk in encoded.as_bytes().chunks(40_000) {
-            let chunk = std::str::from_utf8(chunk)
-                .map_err(|err| format!("encode upload chunk for {remote_name}: {err}"))?;
-            let expression = format!(
-                "window.__bh_upload_chunks.push({})",
-                serde_json::to_string(chunk)
-                    .map_err(|err| format!("serialize upload chunk for {remote_name}: {err}"))?
-            );
-            self.send_with_retry(
-                "Runtime.evaluate",
-                json!({
-                    "expression": expression,
-                    "returnByValue": true,
-                    "awaitPromise": true
-                }),
-                Some(session_id.clone()),
-            )
-            .await?;
-        }
-
-        self.send_with_retry(
-            "Runtime.evaluate",
-            json!({
-                "expression": build_upload_staging_script(remote_name, mime_type),
-                "returnByValue": true,
-                "awaitPromise": true
-            }),
-            Some(session_id),
-        )
-        .await?;
-        self.wait_for_staged_download(remote_name, expected_size, timeout)
-            .await?;
-        Ok(())
-    }
-
-    async fn wait_for_staged_download(
-        &self,
-        filename: &str,
-        expected_size: u64,
-        timeout: Duration,
-    ) -> Result<(), String> {
-        let deadline = Instant::now() + timeout;
-        let mut saw_download = false;
-        let mut download_guid: Option<String> = None;
-        loop {
-            let events = self.drain_events().await;
-            for event in events {
-                let method = event.get("method").and_then(Value::as_str).unwrap_or("");
-                let params = event.get("params").cloned().unwrap_or_else(|| json!({}));
-                if matches!(
-                    method,
-                    "Browser.downloadWillBegin" | "Page.downloadWillBegin"
-                ) && params
-                    .get("suggestedFilename")
-                    .and_then(Value::as_str)
-                    .map(|candidate| candidate == filename)
-                    .unwrap_or(false)
-                {
-                    saw_download = true;
-                    download_guid = params
-                        .get("guid")
-                        .and_then(Value::as_str)
-                        .map(str::to_string);
-                }
-                if matches!(method, "Browser.downloadProgress" | "Page.downloadProgress")
-                    && download_guid
-                        .as_deref()
-                        .map(|guid| params.get("guid").and_then(Value::as_str) == Some(guid))
-                        .unwrap_or(true)
-                    && params.get("state").and_then(Value::as_str) == Some("completed")
-                    && params
-                        .get("totalBytes")
-                        .and_then(Value::as_u64)
-                        .map(|total| total == expected_size)
-                        .unwrap_or(true)
-                {
-                    return Ok(());
-                }
-            }
-
-            if Instant::now() >= deadline {
-                let hint = if saw_download {
-                    "download started but did not complete"
-                } else {
-                    "download did not start"
-                };
-                return Err(format!(
-                    "timed out staging {filename:?} into remote browser: {hint}"
-                ));
-            }
-            sleep(Duration::from_millis(200)).await;
-        }
-    }
-
-    async fn drain_events(&self) -> Vec<Value> {
-        let mut state = self.state.lock().await;
-        state.events.drain(..).collect::<Vec<_>>()
-    }
-
     async fn handle_dialog_result(
         &self,
         accept: bool,
@@ -1123,29 +931,8 @@ impl Daemon {
         &self,
         selector: &str,
         files: &[String],
-        remote_files: &[RemoteUploadFile],
         target_id: Option<&str>,
     ) -> Result<Value, String> {
-        let mut selected_files = Vec::with_capacity(remote_files.len() + files.len());
-        for remote_file in remote_files {
-            selected_files.push(
-                self.stage_remote_file_for_upload(remote_file, Duration::from_secs(30))
-                    .await?,
-            );
-        }
-        let selected_files = if self.config.remote_file_staging {
-            let mut staged = selected_files;
-            for file in files {
-                staged.push(
-                    self.stage_file_for_upload(file, Duration::from_secs(30))
-                        .await?,
-                );
-            }
-            staged
-        } else {
-            selected_files.extend(files.iter().cloned());
-            selected_files
-        };
         let session_id = if let Some(target_id) = target_id {
             self.attach_transient_target(target_id).await?
         } else {
@@ -1189,7 +976,7 @@ impl Daemon {
                 .filter(|node_id| *node_id != 0)
                 .ok_or_else(|| format!("no element for {selector}"))?;
             let params = json!({
-                "files": selected_files,
+                "files": files,
                 "nodeId": node_id
             });
             if transient {
@@ -1242,10 +1029,14 @@ impl Daemon {
                 result: Some(json!({"pong": true, "pid": std::process::id()})),
                 ..DaemonResponse::default()
             },
-            Some(META_DRAIN_EVENTS) => DaemonResponse {
-                events: Some(self.drain_events().await),
-                ..DaemonResponse::default()
-            },
+            Some(META_DRAIN_EVENTS) => {
+                let mut state = self.state.lock().await;
+                let events = state.events.drain(..).collect::<Vec<_>>();
+                DaemonResponse {
+                    events: Some(events),
+                    ..DaemonResponse::default()
+                }
+            }
             Some(META_SESSION) => DaemonResponse {
                 session_id: Some(self.current_session().await),
                 ..DaemonResponse::default()
@@ -1856,22 +1647,9 @@ impl Daemon {
                 let target_id = params
                     .and_then(|params| params.get("target_id"))
                     .and_then(Value::as_str);
-                let remote_files = params
-                    .and_then(|params| params.get("remote_files"))
-                    .and_then(Value::as_array)
-                    .map(|files| {
-                        files
-                            .iter()
-                            .filter_map(parse_remote_upload_file)
-                            .collect::<Vec<_>>()
-                    })
-                    .unwrap_or_default();
                 match selector {
-                    Some(selector) if !files.is_empty() || !remote_files.is_empty() => {
-                        match self
-                            .upload_file_result(selector, &files, &remote_files, target_id)
-                            .await
-                        {
+                    Some(selector) if !files.is_empty() => {
+                        match self.upload_file_result(selector, &files, target_id).await {
                             Ok(result) => DaemonResponse {
                                 result: Some(result),
                                 ..DaemonResponse::default()
@@ -2220,82 +1998,6 @@ fn push_event(events: &mut VecDeque<Value>, event: Value, capacity: usize) {
     events.push_back(event);
 }
 
-fn short_sha256_hex(bytes: &[u8]) -> String {
-    let digest = Sha256::digest(bytes);
-    digest[..6]
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect::<String>()
-}
-
-fn sanitize_upload_filename(filename: &str) -> String {
-    filename
-        .chars()
-        .map(|ch| match ch {
-            '/' | '\\' | '\0' => '_',
-            _ => ch,
-        })
-        .collect()
-}
-
-fn guess_mime_type(filename: &str) -> &'static str {
-    match Path::new(filename)
-        .extension()
-        .and_then(|extension| extension.to_str())
-        .unwrap_or("")
-        .to_ascii_lowercase()
-        .as_str()
-    {
-        "txt" | "log" | "md" | "csv" => "text/plain",
-        "html" | "htm" => "text/html",
-        "json" => "application/json",
-        "pdf" => "application/pdf",
-        "png" => "image/png",
-        "jpg" | "jpeg" => "image/jpeg",
-        "gif" => "image/gif",
-        "webp" => "image/webp",
-        "svg" => "image/svg+xml",
-        "mp4" => "video/mp4",
-        "mov" => "video/quicktime",
-        _ => "application/octet-stream",
-    }
-}
-
-fn build_upload_staging_script(filename: &str, mime_type: &str) -> String {
-    let filename = serde_json::to_string(filename).unwrap_or_else(|_| "\"upload.bin\"".to_string());
-    let mime_type = serde_json::to_string(mime_type)
-        .unwrap_or_else(|_| "\"application/octet-stream\"".to_string());
-    format!(
-        r#"(async () => {{
-  const b64 = window.__bh_upload_chunks.join('');
-  const binary = atob(b64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  const blob = new Blob([bytes], {{type: {mime_type}}});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = {filename};
-  a.style.display = 'none';
-  document.body.appendChild(a);
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
-  return true;
-}})()"#
-    )
-}
-
-fn parse_remote_upload_file(value: &Value) -> Option<RemoteUploadFile> {
-    Some(RemoteUploadFile {
-        name: value.get("name")?.as_str()?.to_string(),
-        data_base64: value.get("data_base64")?.as_str()?.to_string(),
-        mime_type: value
-            .get("mime_type")
-            .and_then(Value::as_str)
-            .map(str::to_string),
-    })
-}
-
 fn shrink_png_data_url(encoded: &str, max_dim: u32) -> Result<String, String> {
     let bytes = decode_base64_standard(encoded)?;
     let (width, height) = png_dimensions_from_bytes(&bytes)?;
@@ -2458,10 +2160,8 @@ mod tests {
     use serde_json::{json, Value};
 
     use super::{
-        build_upload_staging_script, encode_base64_standard, guess_mime_type, is_real_page,
-        key_fields, log_tail, parse_remote_upload_file, png_dimensions_from_base64, push_event,
-        sanitize_upload_filename, short_sha256_hex, shrink_png_data_url, stop_best_effort,
-        stop_remote, tab_summary, DaemonConfig,
+        encode_base64_standard, is_real_page, key_fields, log_tail, png_dimensions_from_base64,
+        push_event, shrink_png_data_url, stop_best_effort, stop_remote, tab_summary, DaemonConfig,
     };
 
     fn test_config(label: &str) -> DaemonConfig {
@@ -2481,28 +2181,6 @@ mod tests {
 
         let drained = events.into_iter().collect::<Vec<_>>();
         assert_eq!(drained, vec![json!({"n": 2}), json!({"n": 3})]);
-    }
-
-    #[test]
-    fn upload_staging_helpers_build_safe_browser_paths() {
-        assert_eq!(sanitize_upload_filename("a/b\\c.txt\0"), "a_b_c.txt_");
-        assert_eq!(short_sha256_hex(b"hello").len(), 12);
-        assert_eq!(guess_mime_type("demo.txt"), "text/plain");
-        assert_eq!(guess_mime_type("demo.unknown"), "application/octet-stream");
-
-        let script = build_upload_staging_script("demo.txt", "text/plain");
-        assert!(script.contains("window.__bh_upload_chunks.join"));
-        assert!(script.contains("URL.createObjectURL"));
-        assert!(script.contains("demo.txt"));
-
-        let remote = parse_remote_upload_file(&json!({
-            "name": "demo.txt",
-            "data_base64": "aGVsbG8=",
-            "mime_type": "text/plain"
-        }))
-        .expect("remote upload file");
-        assert_eq!(remote.name, "demo.txt");
-        assert_eq!(remote.mime_type.as_deref(), Some("text/plain"));
     }
 
     #[test]
