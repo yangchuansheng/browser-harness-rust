@@ -138,6 +138,9 @@ JSON
 browser-harness new-tab <<'JSON'
 {"daemon_name":"default","url":"https://example.com"}
 JSON
+browser-harness close-tab <<'JSON'
+{"daemon_name":"default"}
+JSON
 ```
 
 The installer builds the Rust binaries from this checkout and installs them into

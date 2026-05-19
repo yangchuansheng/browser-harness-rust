@@ -83,6 +83,9 @@ JSON
 cargo run --quiet --bin bhrun -- new-tab <<'JSON'
 {"daemon_name":"default","url":"https://example.com"}
 JSON
+cargo run --quiet --bin bhrun -- close-tab <<'JSON'
+{"daemon_name":"default","target_id":"<target-id>"}
+JSON
 cargo run --quiet --bin bhrun -- switch-tab <<'JSON'
 {"daemon_name":"default","target_id":"<target-id>"}
 JSON

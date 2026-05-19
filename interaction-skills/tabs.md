@@ -8,8 +8,9 @@ The Rust-native path is:
 - `bhrun list-tabs`
 - `bhrun current-tab`
 - `bhrun new-tab`
+- `bhrun close-tab`
 - `bhrun switch-tab`
-- `bh_guest_sdk::{list_tabs,current_tab,new_tab,switch_tab}`
+- `bh_guest_sdk::{list_tabs,current_tab,new_tab,close_tab,switch_tab}`
 
 ## Recommended Flow
 
@@ -21,6 +22,10 @@ JSON
 bhrun switch-tab <<'JSON'
 {"daemon_name":"default","target_id":"<target-id>"}
 JSON
+
+bhrun close-tab <<'JSON'
+{"daemon_name":"default","target_id":"<target-id>"}
+JSON
 ```
 
 ## What These Helpers Mean
@@ -28,12 +33,15 @@ JSON
 - `list-tabs`: enumerate page targets
 - `current-tab`: inspect the currently attached target
 - `new-tab`: create a new page target
+- `close-tab`: close a specific target, or the current target when `target_id`
+  is omitted
 - `switch-tab`: attach to and activate a known target
 
 ## Rules
 
 - use `list-tabs(include_internal=false)` for user-facing work
 - use `switch-tab` when you already know the target id
+- use `close-tab` after temporary automation tabs are no longer needed
 - use `ensure-real-tab` if you suspect the daemon is attached to an internal tab
 - re-check `current-tab` or `page_info()` after switching if the flow is
   layout-sensitive

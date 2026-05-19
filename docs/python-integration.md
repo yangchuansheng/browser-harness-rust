@@ -48,6 +48,13 @@ def new_tab(url="about:blank", daemon_name="default"):
     return bh_call("new-tab", {"daemon_name": daemon_name, "url": url})["target_id"]
 
 
+def close_tab(target_id=None, daemon_name="default"):
+    payload = {"daemon_name": daemon_name}
+    if target_id is not None:
+        payload["target_id"] = target_id
+    return bh_call("close-tab", payload)
+
+
 def wait_for_load(timeout=15.0, daemon_name="default"):
     return bool(
         bh_call(

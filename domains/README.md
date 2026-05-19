@@ -21,6 +21,8 @@ Rules:
 - Read every file in a matching `domains/<site>/` directory when
   `BH_DOMAIN_SKILLS=1` and the task is site-specific.
 - Upstream `scraping.md` files are mapped to `skill.md` in this fork.
+- Upstream `domain-skills/` and `agent-workspace/domain-skills/` entries are
+  mapped into this `domains/` tree instead of keeping legacy duplicate roots.
 - Extra notes can live beside `skill.md` for task-specific flows.
 - Executable Rust guests still live under [`../rust/guests/`](../rust/guests/)
   unless a site explicitly grows its own guest package.

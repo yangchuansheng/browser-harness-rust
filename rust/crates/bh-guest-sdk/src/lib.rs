@@ -108,6 +108,15 @@ pub fn new_tab(url: &str) -> Result<NewTabResult, GuestError> {
     call_json("new_tab", &json!({ "url": url }))
 }
 
+pub fn close_tab(target_id: Option<&str>) -> Result<(), GuestError> {
+    call_json(
+        "close_tab",
+        &json!({
+            "target_id": target_id,
+        }),
+    )
+}
+
 pub fn switch_tab(target_id: &str) -> Result<SwitchTabResult, GuestError> {
     call_json(
         "switch_tab",
@@ -590,12 +599,12 @@ fn imported_call_json(_operation: &[u8], _request: &[u8], _output: &mut [u8]) ->
 #[cfg(test)]
 mod tests {
     use super::{
-        call_json_with, cdp_raw, click, configure_downloads, current_session, current_tab,
-        dispatch_key, ensure_real_tab, get_cookies, goto, handle_dialog, http_get, iframe_target,
-        js, list_tabs, mouse_down, mouse_move, mouse_up, new_tab, page_info, press_key, print_pdf,
-        screenshot, scroll, set_cookies, set_viewport, switch_tab, type_text, upload_file, wait,
-        wait_for_console, wait_for_dialog, wait_for_download, wait_for_event, wait_for_load,
-        wait_for_load_event, wait_for_request, wait_for_response, watch_events,
+        call_json_with, cdp_raw, click, close_tab, configure_downloads, current_session,
+        current_tab, dispatch_key, ensure_real_tab, get_cookies, goto, handle_dialog, http_get,
+        iframe_target, js, list_tabs, mouse_down, mouse_move, mouse_up, new_tab, page_info,
+        press_key, print_pdf, screenshot, scroll, set_cookies, set_viewport, switch_tab, type_text,
+        upload_file, wait, wait_for_console, wait_for_dialog, wait_for_download, wait_for_event,
+        wait_for_load, wait_for_load_event, wait_for_request, wait_for_response, watch_events,
         CurrentSessionResult, GuestError, NewTabResult, SwitchTabResult, TabSummary, WaitResult,
         WatchEventsLine,
     };
@@ -714,6 +723,24 @@ mod tests {
         )
         .expect("new tab result");
         assert_eq!(new_tab_result.target_id, "target-new");
+
+        let close_tab_result: Value = call_json_with(
+            |operation, request, output| {
+                assert_eq!(operation, b"close_tab");
+                let request: Value = serde_json::from_slice(request).expect("parse request");
+                assert_eq!(
+                    request.get("target_id").and_then(Value::as_str),
+                    Some("target-new")
+                );
+                let response = serde_json::to_vec(&json!(null)).expect("serialize");
+                output[..response.len()].copy_from_slice(&response);
+                response.len() as i32
+            },
+            "close_tab",
+            &json!({"target_id":"target-new"}),
+        )
+        .expect("close tab result");
+        assert!(close_tab_result.is_null());
 
         let switch_tab_result: SwitchTabResult = call_json_with(
             |operation, request, output| {
@@ -1650,6 +1677,7 @@ mod tests {
         let _ = current_tab;
         let _ = list_tabs;
         let _ = new_tab;
+        let _ = close_tab;
         let _ = switch_tab;
         let _ = ensure_real_tab;
         let _ = iframe_target;

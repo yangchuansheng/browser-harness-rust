@@ -558,6 +558,30 @@ fn smoke_tabs() -> Result<Value, String> {
             return Err("page-info after switch-forward did not match the new tab URL".to_string());
         }
 
+        result.insert(
+            "close_new_tab".into(),
+            close_tab(name, Some(&new_target_id))?,
+        );
+        let tabs_after_close = list_tabs(name)?;
+        result.insert(
+            "tabs_after_close".into(),
+            Value::Array(tabs_after_close.clone()),
+        );
+        if tabs_after_close
+            .iter()
+            .any(|tab| tab.get("targetId").and_then(Value::as_str) == Some(new_target_id.as_str()))
+        {
+            return Err("list-tabs still included the closed tab target".to_string());
+        }
+
+        let current_after_close = current_tab(name)?;
+        result.insert("current_after_close".into(), current_after_close.clone());
+        if current_after_close.get("targetId").and_then(Value::as_str)
+            == Some(new_target_id.as_str())
+        {
+            return Err("current-tab still pointed at the closed target".to_string());
+        }
+
         result.insert("target_url".into(), Value::String(target_url));
         Ok(())
     })();
@@ -1104,6 +1128,7 @@ fn smoke_tab_response_guest() -> Result<Value, String> {
                 "current_tab",
                 "list_tabs",
                 "new_tab",
+                "close_tab",
                 "switch_tab",
                 "current_session",
                 "goto",
@@ -1146,6 +1171,9 @@ fn smoke_tab_response_guest() -> Result<Value, String> {
             "page_info",
             "js",
             "list_tabs",
+            "close_tab",
+            "list_tabs",
+            "switch_tab",
         ];
         if operations != expected_operations {
             return Err(format!(
@@ -1211,6 +1239,19 @@ fn smoke_tab_response_guest() -> Result<Value, String> {
             .and_then(|call| call.get("response"))
             .and_then(Value::as_array)
             .ok_or_else(|| "guest final list_tabs response missing".to_string())?;
+        let close_tab_response = calls
+            .get(17)
+            .and_then(|call| call.get("response"))
+            .ok_or_else(|| "guest close_tab response missing".to_string())?;
+        let tabs_after_close = calls
+            .get(18)
+            .and_then(|call| call.get("response"))
+            .and_then(Value::as_array)
+            .ok_or_else(|| "guest list_tabs after close_tab response missing".to_string())?;
+        let switch_after_close = calls
+            .get(19)
+            .and_then(|call| call.get("response"))
+            .ok_or_else(|| "guest switch-tab after close response missing".to_string())?;
 
         let initial_target_id = required_string_field(initial_tab, "targetId")?;
         let new_target_id = calls
@@ -1341,13 +1382,35 @@ fn smoke_tab_response_guest() -> Result<Value, String> {
                 "guest final list_tabs result did not grow after creating a new tab".to_string(),
             );
         }
+        if !close_tab_response.is_null() {
+            return Err(format!(
+                "guest close_tab response was not null: {close_tab_response:?}"
+            ));
+        }
+        if tabs_after_close
+            .iter()
+            .any(|tab| tab.get("targetId").and_then(Value::as_str) == Some(new_target_id.as_str()))
+        {
+            return Err("guest list_tabs after close_tab still included new target".to_string());
+        }
+        if switch_after_close
+            .get("session_id")
+            .and_then(Value::as_str)
+            .is_none()
+        {
+            return Err("guest switch-tab after close did not return a session".to_string());
+        }
 
         let page_after_guest = page_info(options.name.as_str())?;
         result.insert("page_after_guest".into(), page_after_guest.clone());
-        if page_after_guest.get("url").and_then(Value::as_str)
-            != Some(TAB_RESPONSE_GUEST_TARGET_URL)
-        {
-            return Err("runner page-info after guest did not match the target URL".to_string());
+        let page_after_guest_url = page_after_guest
+            .get("url")
+            .and_then(Value::as_str)
+            .ok_or_else(|| "runner page-info after guest did not include a URL".to_string())?;
+        if page_after_guest_url == TAB_RESPONSE_GUEST_TARGET_URL {
+            return Err(
+                "runner page-info after guest still matched the closed tab URL".to_string(),
+            );
         }
 
         let current_tab_after_guest = current_tab(options.name.as_str())?;
@@ -1358,10 +1421,10 @@ fn smoke_tab_response_guest() -> Result<Value, String> {
         if current_tab_after_guest
             .get("targetId")
             .and_then(Value::as_str)
-            != Some(new_target_id.as_str())
+            == Some(new_target_id.as_str())
         {
             return Err(
-                "runner current-tab after guest did not stay on the new target".to_string(),
+                "runner current-tab after guest still pointed at the closed target".to_string(),
             );
         }
 
@@ -1373,10 +1436,11 @@ fn smoke_tab_response_guest() -> Result<Value, String> {
         if current_session_after_guest
             .get("session_id")
             .and_then(Value::as_str)
-            != Some(active_session_id.as_str())
+            == Some(active_session_id.as_str())
         {
             return Err(
-                "runner current-session after guest did not match the guest session".to_string(),
+                "runner current-session after guest still matched the closed tab session"
+                    .to_string(),
             );
         }
 
@@ -1385,12 +1449,12 @@ fn smoke_tab_response_guest() -> Result<Value, String> {
             "tabs_after_guest".into(),
             Value::Array(tabs_after_guest.clone()),
         );
-        if !tabs_after_guest
+        if tabs_after_guest
             .iter()
             .any(|tab| tab.get("targetId").and_then(Value::as_str) == Some(new_target_id.as_str()))
         {
             return Err(
-                "runner list-tabs after guest did not include the new tab target".to_string(),
+                "runner list-tabs after guest still included the closed tab target".to_string(),
             );
         }
         Ok(())
@@ -5949,6 +6013,18 @@ fn new_tab(name: &str, url: &str) -> Result<String, String> {
         Duration::from_secs(10),
     )?;
     required_string_field(&value, "target_id")
+}
+
+fn close_tab(name: &str, target_id: Option<&str>) -> Result<Value, String> {
+    let payload = match target_id {
+        Some(target_id) => json!({"target_id": target_id}),
+        None => Value::Null,
+    };
+    runner_json(
+        "close-tab",
+        Some(named_payload(name, payload)?),
+        Duration::from_secs(10),
+    )
 }
 
 fn wait_for_load(name: &str) -> Result<bool, String> {

@@ -71,11 +71,14 @@ JSON
 browser-harness screenshot <<'JSON'
 {"daemon_name":"default","full":true,"max_dim":1800}
 JSON
+browser-harness close-tab <<'JSON'
+{"daemon_name":"default"}
+JSON
 ```
 
 `bhrun` exposes the same operation names for WASM guests through
 `bh_guest_sdk::{wait_for_element, fill_input, wait_for_network_idle,
-screenshot_with_max_dim}`.
+screenshot_with_max_dim, close_tab}`.
 
 ### Remote browsers
 

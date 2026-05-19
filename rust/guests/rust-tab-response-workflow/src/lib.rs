@@ -1,5 +1,5 @@
 use bh_guest_sdk::{
-    current_session, current_tab, goto, js, list_tabs, new_tab, page_info, switch_tab,
+    close_tab, current_session, current_tab, goto, js, list_tabs, new_tab, page_info, switch_tab,
     wait_for_response,
 };
 use serde_json::Value;
@@ -113,6 +113,16 @@ fn run_inner() -> Result<(), i32> {
     if tabs_after_navigation.len() < initial_tabs.len() + 1 {
         return Err(37);
     }
+
+    close_tab(Some(&new_tab_result.target_id)).map_err(|_| 38)?;
+    let tabs_after_close = list_tabs(false).map_err(|_| 39)?;
+    if tabs_after_close
+        .iter()
+        .any(|tab| tab.target_id == new_tab_result.target_id)
+    {
+        return Err(40);
+    }
+    switch_tab(&initial_tab.target_id).map_err(|_| 41)?;
 
     Ok(())
 }

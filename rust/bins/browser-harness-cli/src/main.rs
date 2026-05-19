@@ -22,7 +22,7 @@ const ADMIN_COMMANDS: &[&str] = &[
 const INTERNAL_COMMANDS: &[&str] = &["install", "verify-install"];
 const INSTALLABLE_BINARIES: &[&str] = &["browser-harness", "bhctl", "bhrun", "bhd"];
 
-const RUNNER_HELP: &str = "manifest|sample-config|capabilities|summary|run-guest|serve-guest|current-tab|list-tabs|new-tab|switch-tab|ensure-real-tab|iframe-target|page-info|goto|wait-for-load|js|click|mouse-move|mouse-down|mouse-up|type-text|wait-for-element|fill-input|wait-for-network-idle|press-key|dispatch-key|scroll|set-viewport|print-pdf|screenshot|handle-dialog|upload-file|get-cookies|set-cookies|configure-downloads|wait|http-get|current-session|drain-events|cdp-raw|wait-for-event|watch-events|wait-for-load-event|wait-for-download|wait-for-request|wait-for-response|wait-for-console|wait-for-dialog";
+const RUNNER_HELP: &str = "manifest|sample-config|capabilities|summary|run-guest|serve-guest|current-tab|list-tabs|new-tab|close-tab|switch-tab|ensure-real-tab|iframe-target|page-info|goto|wait-for-load|js|click|mouse-move|mouse-down|mouse-up|type-text|wait-for-element|fill-input|wait-for-network-idle|press-key|dispatch-key|scroll|set-viewport|print-pdf|screenshot|handle-dialog|upload-file|get-cookies|set-cookies|configure-downloads|wait|http-get|current-session|drain-events|cdp-raw|wait-for-event|watch-events|wait-for-load-event|wait-for-download|wait-for-request|wait-for-response|wait-for-console|wait-for-dialog";
 const EXPECTED_INSTALLED_BINARIES: &[&str] = &["bhctl", "bhrun", "bhd"];
 const FORBIDDEN_PYTHON_FILES: &[&str] = &[
     "run.py",

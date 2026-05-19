@@ -6,17 +6,17 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use bh_protocol::{
-    DaemonRequest, DaemonResponse, META_CLICK, META_CONFIGURE_DOWNLOADS, META_CURRENT_TAB,
-    META_DISPATCH_KEY, META_DRAIN_EVENTS, META_ENSURE_REAL_TAB, META_GET_COOKIES, META_GOTO,
-    META_HANDLE_DIALOG, META_IFRAME_TARGET, META_JS, META_LIST_TABS, META_MOUSE_DOWN,
+    DaemonRequest, DaemonResponse, META_CLICK, META_CLOSE_TAB, META_CONFIGURE_DOWNLOADS,
+    META_CURRENT_TAB, META_DISPATCH_KEY, META_DRAIN_EVENTS, META_ENSURE_REAL_TAB, META_GET_COOKIES,
+    META_GOTO, META_HANDLE_DIALOG, META_IFRAME_TARGET, META_JS, META_LIST_TABS, META_MOUSE_DOWN,
     META_MOUSE_MOVE, META_MOUSE_UP, META_NEW_TAB, META_PAGE_INFO, META_PRESS_KEY, META_PRINT_PDF,
     META_SCREENSHOT, META_SCROLL, META_SESSION, META_SET_COOKIES, META_SET_VIEWPORT,
     META_SWITCH_TAB, META_TYPE_TEXT, META_UPLOAD_FILE, META_WAIT_FOR_LOAD,
 };
 use bh_wasm_host::{
     console_event_matches, default_manifest, default_runner_config, event_matches_filter,
-    operation_names, CdpRawRequest, ClickRequest, ConfigureDownloadsRequest, CookieParam,
-    CookieRecord, CurrentSessionRequest, CurrentSessionResult, CurrentTabRequest,
+    operation_names, CdpRawRequest, ClickRequest, CloseTabRequest, ConfigureDownloadsRequest,
+    CookieParam, CookieRecord, CurrentSessionRequest, CurrentSessionResult, CurrentTabRequest,
     DispatchKeyRequest, EnsureRealTabRequest, FillInputRequest, GetCookiesRequest, GotoRequest,
     GuestCallRecord, GuestRunResult, GuestServeRequest, GuestServeResponse, HandleDialogRequest,
     HttpGetRequest, IframeTargetRequest, JsRequest, ListTabsRequest, MouseDownRequest,
@@ -38,7 +38,7 @@ const DAEMON_TIMEOUT_SLACK: Duration = Duration::from_secs(5);
 
 fn print_usage() {
     eprintln!(
-        "usage: bhrun <manifest|sample-config|capabilities|summary|run-guest [path]|serve-guest [path]|current-tab|list-tabs|new-tab|switch-tab|ensure-real-tab|iframe-target|page-info|goto|wait-for-load|js|click|mouse-move|mouse-down|mouse-up|type-text|wait-for-element|fill-input|wait-for-network-idle|press-key|dispatch-key|scroll|set-viewport|print-pdf|screenshot|handle-dialog|upload-file|get-cookies|set-cookies|configure-downloads|wait|http-get|current-session|drain-events|cdp-raw|wait-for-event|watch-events|wait-for-load-event|wait-for-download|wait-for-request|wait-for-response|wait-for-console|wait-for-dialog>\n\
+        "usage: bhrun <manifest|sample-config|capabilities|summary|run-guest [path]|serve-guest [path]|current-tab|list-tabs|new-tab|close-tab|switch-tab|ensure-real-tab|iframe-target|page-info|goto|wait-for-load|js|click|mouse-move|mouse-down|mouse-up|type-text|wait-for-element|fill-input|wait-for-network-idle|press-key|dispatch-key|scroll|set-viewport|print-pdf|screenshot|handle-dialog|upload-file|get-cookies|set-cookies|configure-downloads|wait|http-get|current-session|drain-events|cdp-raw|wait-for-event|watch-events|wait-for-load-event|wait-for-download|wait-for-request|wait-for-response|wait-for-console|wait-for-dialog>\n\
          runner scaffold: persistent guest serving, event waiting, and preview guest execution are live"
     );
 }
@@ -73,7 +73,7 @@ where
             let manifest = default_manifest();
             writeln!(
                 stdout,
-                "bhrun scaffold: execution_model={:?} guest_transport={:?} protocol_families={} operations={} current_tab=live list_tabs=live new_tab=live switch_tab=live ensure_real_tab=live iframe_target=live page_info=live goto=live wait_for_load=live js=live click=live mouse_move=live mouse_down=live mouse_up=live type_text=live wait_for_element=live fill_input=live wait_for_network_idle=live press_key=live dispatch_key=live scroll=live set_viewport=live print_pdf=live screenshot=live handle_dialog=live upload_file=live get_cookies=live set_cookies=live configure_downloads=live wait=live http_get=live current_session=live cdp_raw=experimental wait_for_event=live watch_events=live wait_for_download=live wait_for_request=live wait_for_response=live wait_for_console=live wait_for_dialog=live wasm_guests=preview persistent_guest_runner=preview",
+                "bhrun scaffold: execution_model={:?} guest_transport={:?} protocol_families={} operations={} current_tab=live list_tabs=live new_tab=live close_tab=live switch_tab=live ensure_real_tab=live iframe_target=live page_info=live goto=live wait_for_load=live js=live click=live mouse_move=live mouse_down=live mouse_up=live type_text=live wait_for_element=live fill_input=live wait_for_network_idle=live press_key=live dispatch_key=live scroll=live set_viewport=live print_pdf=live screenshot=live handle_dialog=live upload_file=live get_cookies=live set_cookies=live configure_downloads=live wait=live http_get=live current_session=live cdp_raw=experimental wait_for_event=live watch_events=live wait_for_download=live wait_for_request=live wait_for_response=live wait_for_console=live wait_for_dialog=live wasm_guests=preview persistent_guest_runner=preview",
                 manifest.execution_model,
                 manifest.guest_transport,
                 manifest.protocol_families.len(),
@@ -109,6 +109,11 @@ where
             let request = read_optional_json::<NewTabRequest, _>(&mut stdin)?.unwrap_or_default();
             let result = new_tab(request)?;
             write_json(&mut stdout, &result)
+        }
+        Some("close-tab") => {
+            let request = read_optional_json::<CloseTabRequest, _>(&mut stdin)?.unwrap_or_default();
+            close_tab(request)?;
+            write_json(&mut stdout, &())
         }
         Some("switch-tab") => {
             let request = read_json::<SwitchTabRequest, _>(&mut stdin)?;
@@ -344,6 +349,10 @@ fn list_tabs(request: ListTabsRequest) -> Result<Vec<TabSummary>, String> {
 
 fn new_tab(request: NewTabRequest) -> Result<NewTabResult, String> {
     new_tab_with_sender(request, send_daemon_request)
+}
+
+fn close_tab(request: CloseTabRequest) -> Result<(), String> {
+    close_tab_with_sender(request, send_daemon_request)
 }
 
 fn switch_tab(request: SwitchTabRequest) -> Result<SwitchTabResult, String> {
@@ -793,6 +802,17 @@ where
         &mut sender,
     )?;
     Ok(NewTabResult { target_id })
+}
+
+fn close_tab_with_sender<F>(request: CloseTabRequest, mut sender: F) -> Result<(), String>
+where
+    F: FnMut(&str, &DaemonRequest) -> Result<DaemonResponse, String>,
+{
+    let request = request.normalized();
+    let params = request
+        .target_id
+        .map(|target_id| json!({"target_id": target_id}));
+    meta_result_with_sender(&request.daemon_name, META_CLOSE_TAB, params, &mut sender).map(|_| ())
 }
 
 fn switch_tab_with_sender<F>(
@@ -1694,6 +1714,9 @@ fn dispatch_guest_operation(
             serialize_guest_result(list_tabs(parse_request_value(&request)?), "list_tabs")?
         }
         "new_tab" => serialize_guest_result(new_tab(parse_request_value(&request)?), "new_tab")?,
+        "close_tab" => {
+            serialize_guest_result(close_tab(parse_request_value(&request)?), "close_tab")?
+        }
         "switch_tab" => {
             serialize_guest_result(switch_tab(parse_request_value(&request)?), "switch_tab")?
         }
@@ -1970,25 +1993,26 @@ where
 #[cfg(test)]
 mod tests {
     use super::{
-        cdp_raw_with_sender, click_with_sender, configure_downloads_with_sender,
-        current_session_with_sender, current_tab_with_sender, daemon_read_timeout,
-        dispatch_guest_operation, dispatch_key_with_sender, drain_events_with_sender,
-        ensure_real_tab_with_sender, fill_input_with_sender, get_cookies_with_sender,
-        goto_with_sender, handle_dialog_with_sender, http_get, iframe_target_with_sender,
-        inject_daemon_name, js_with_sender, list_tabs_with_sender, mouse_down_with_sender,
-        mouse_move_with_sender, mouse_up_with_sender, new_tab_with_sender, page_info_with_sender,
-        press_key_with_sender, print_pdf_with_sender, run_cli, screenshot_with_sender,
-        scroll_with_sender, serialize_guest_result, set_cookies_with_sender,
-        set_viewport_with_sender, switch_tab_with_sender, type_text_with_sender,
-        upload_file_with_sender, wait, wait_for_console_with_drain, wait_for_element_with_sender,
-        wait_for_event_with_drain, wait_for_load_with_sender, wait_for_network_idle_with_drain,
-        watch_events_collect_with_drain, watch_events_with_drain, DaemonResponse, GuestHostState,
-        GuestRuntime, META_CLICK, META_CONFIGURE_DOWNLOADS, META_CURRENT_TAB, META_DISPATCH_KEY,
-        META_DRAIN_EVENTS, META_ENSURE_REAL_TAB, META_GET_COOKIES, META_GOTO, META_HANDLE_DIALOG,
-        META_IFRAME_TARGET, META_JS, META_LIST_TABS, META_MOUSE_DOWN, META_MOUSE_MOVE,
-        META_MOUSE_UP, META_NEW_TAB, META_PAGE_INFO, META_PRESS_KEY, META_PRINT_PDF,
-        META_SCREENSHOT, META_SCROLL, META_SESSION, META_SET_COOKIES, META_SET_VIEWPORT,
-        META_SWITCH_TAB, META_TYPE_TEXT, META_UPLOAD_FILE, META_WAIT_FOR_LOAD,
+        cdp_raw_with_sender, click_with_sender, close_tab_with_sender,
+        configure_downloads_with_sender, current_session_with_sender, current_tab_with_sender,
+        daemon_read_timeout, dispatch_guest_operation, dispatch_key_with_sender,
+        drain_events_with_sender, ensure_real_tab_with_sender, fill_input_with_sender,
+        get_cookies_with_sender, goto_with_sender, handle_dialog_with_sender, http_get,
+        iframe_target_with_sender, inject_daemon_name, js_with_sender, list_tabs_with_sender,
+        mouse_down_with_sender, mouse_move_with_sender, mouse_up_with_sender, new_tab_with_sender,
+        page_info_with_sender, press_key_with_sender, print_pdf_with_sender, run_cli,
+        screenshot_with_sender, scroll_with_sender, serialize_guest_result,
+        set_cookies_with_sender, set_viewport_with_sender, switch_tab_with_sender,
+        type_text_with_sender, upload_file_with_sender, wait, wait_for_console_with_drain,
+        wait_for_element_with_sender, wait_for_event_with_drain, wait_for_load_with_sender,
+        wait_for_network_idle_with_drain, watch_events_collect_with_drain, watch_events_with_drain,
+        DaemonResponse, GuestHostState, GuestRuntime, META_CLICK, META_CLOSE_TAB,
+        META_CONFIGURE_DOWNLOADS, META_CURRENT_TAB, META_DISPATCH_KEY, META_DRAIN_EVENTS,
+        META_ENSURE_REAL_TAB, META_GET_COOKIES, META_GOTO, META_HANDLE_DIALOG, META_IFRAME_TARGET,
+        META_JS, META_LIST_TABS, META_MOUSE_DOWN, META_MOUSE_MOVE, META_MOUSE_UP, META_NEW_TAB,
+        META_PAGE_INFO, META_PRESS_KEY, META_PRINT_PDF, META_SCREENSHOT, META_SCROLL, META_SESSION,
+        META_SET_COOKIES, META_SET_VIEWPORT, META_SWITCH_TAB, META_TYPE_TEXT, META_UPLOAD_FILE,
+        META_WAIT_FOR_LOAD,
     };
     use std::collections::BTreeMap;
     use std::collections::VecDeque;
@@ -1999,17 +2023,18 @@ mod tests {
 
     use bh_protocol::DaemonRequest;
     use bh_wasm_host::{
-        default_runner_config, CdpRawRequest, ClickRequest, ConfigureDownloadsRequest, CookieParam,
-        CurrentSessionRequest, CurrentSessionResult, CurrentTabRequest, DispatchKeyRequest,
-        EnsureRealTabRequest, EventFilter, FillInputRequest, GetCookiesRequest, GotoRequest,
-        GuestServeResponse, HandleDialogRequest, HttpGetRequest, IframeTargetRequest, JsRequest,
-        ListTabsRequest, MouseDownRequest, MouseMoveRequest, MouseUpRequest, NewTabRequest,
-        PageInfoRequest, PressKeyRequest, PrintPdfRequest, RunnerConfig, ScreenshotRequest,
-        ScrollRequest, SetCookiesRequest, SetViewportRequest, SwitchTabRequest, TypeTextRequest,
-        UploadFileRequest, WaitForConsoleRequest, WaitForDialogRequest, WaitForElementRequest,
-        WaitForEventRequest, WaitForEventResult, WaitForLoadEventRequest, WaitForLoadRequest,
-        WaitForNetworkIdleRequest, WaitForRequestRequest, WaitForResponseRequest, WaitRequest,
-        WatchEventsLine, WatchEventsRequest,
+        default_runner_config, CdpRawRequest, ClickRequest, CloseTabRequest,
+        ConfigureDownloadsRequest, CookieParam, CurrentSessionRequest, CurrentSessionResult,
+        CurrentTabRequest, DispatchKeyRequest, EnsureRealTabRequest, EventFilter, FillInputRequest,
+        GetCookiesRequest, GotoRequest, GuestServeResponse, HandleDialogRequest, HttpGetRequest,
+        IframeTargetRequest, JsRequest, ListTabsRequest, MouseDownRequest, MouseMoveRequest,
+        MouseUpRequest, NewTabRequest, PageInfoRequest, PressKeyRequest, PrintPdfRequest,
+        RunnerConfig, ScreenshotRequest, ScrollRequest, SetCookiesRequest, SetViewportRequest,
+        SwitchTabRequest, TypeTextRequest, UploadFileRequest, WaitForConsoleRequest,
+        WaitForDialogRequest, WaitForElementRequest, WaitForEventRequest, WaitForEventResult,
+        WaitForLoadEventRequest, WaitForLoadRequest, WaitForNetworkIdleRequest,
+        WaitForRequestRequest, WaitForResponseRequest, WaitRequest, WatchEventsLine,
+        WatchEventsRequest,
     };
     use serde_json::{json, Value};
 
@@ -2425,6 +2450,53 @@ mod tests {
         .expect("new tab result");
 
         assert_eq!(result.target_id, "target-new");
+    }
+
+    #[test]
+    fn close_tab_uses_meta_request_with_target_id() {
+        close_tab_with_sender(
+            CloseTabRequest {
+                daemon_name: "runner".to_string(),
+                target_id: Some("target-9".to_string()),
+            },
+            |daemon, request| {
+                assert_eq!(daemon, "runner");
+                assert_eq!(request.meta.as_deref(), Some(META_CLOSE_TAB));
+                assert_eq!(
+                    request
+                        .params
+                        .as_ref()
+                        .and_then(|params| params.get("target_id"))
+                        .and_then(Value::as_str),
+                    Some("target-9")
+                );
+                Ok(DaemonResponse {
+                    result: Some(json!(true)),
+                    ..DaemonResponse::default()
+                })
+            },
+        )
+        .expect("close tab result");
+    }
+
+    #[test]
+    fn close_tab_without_target_closes_current_tab() {
+        close_tab_with_sender(
+            CloseTabRequest {
+                daemon_name: "runner".to_string(),
+                target_id: None,
+            },
+            |daemon, request| {
+                assert_eq!(daemon, "runner");
+                assert_eq!(request.meta.as_deref(), Some(META_CLOSE_TAB));
+                assert!(request.params.is_none());
+                Ok(DaemonResponse {
+                    result: Some(json!(true)),
+                    ..DaemonResponse::default()
+                })
+            },
+        )
+        .expect("close current tab result");
     }
 
     #[test]
@@ -3339,6 +3411,7 @@ mod tests {
         assert!(text.contains("current_tab=live"));
         assert!(text.contains("list_tabs=live"));
         assert!(text.contains("new_tab=live"));
+        assert!(text.contains("close_tab=live"));
         assert!(text.contains("switch_tab=live"));
         assert!(text.contains("ensure_real_tab=live"));
         assert!(text.contains("iframe_target=live"));

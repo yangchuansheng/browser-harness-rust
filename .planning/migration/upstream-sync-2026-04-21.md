@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `9e47d2b7775404094e977d3297d8a41e09f73a81`
-- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..9e47d2b7775404094e977d3297d8a41e09f73a81`
-- Count: 251 commits
+- Upstream target commit: `ea7d1710ba8621c658d6d61fe46bcf77746e83e4`
+- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..ea7d1710ba8621c658d6d61fe46bcf77746e83e4`
+- Count: 256 commits
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -129,3 +129,23 @@
 - `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed.
 - `git diff --check` passed.
 - `python3` tracked-file secret scan plus `rg` checks passed with no obvious secrets, local home paths, `llms.txt`, Browser Use Box demo link, `remote_files`, or remote upload staging remnants in active code/docs.
+
+## Daily Upstream Sync — 2026-05-20
+
+- Started from clean local `main` at `3f5002175246755fba081379b71921fd026fb8ae`, equal to `origin/main`; `upstream/main` was `ea7d1710ba8621c658d6d61fe46bcf77746e83e4`.
+- Previous target: `9e47d2b7775404094e977d3297d8a41e09f73a81`; new upstream target: `ea7d1710ba8621c658d6d61fe46bcf77746e83e4`.
+- New upstream range `9e47d2b7775404094e977d3297d8a41e09f73a81..ea7d1710ba8621c658d6d61fe46bcf77746e83e4`: 3 non-merge commits plus 2 merge commits.
+- Upstream changes analyzed:
+  - `e0e7f0b`: added Python `close_tab(target=None)` using CDP `Target.closeTarget` and accepting a target id, tab dict, or omitted current target.
+  - `62894f2`: added `domain-skills/hubspot/private-app-webhooks.md`.
+  - `2fa1b1e`: moved that skill to `agent-workspace/domain-skills/hubspot/private-app-webhooks.md` and removed task-specific wording.
+- Rust migration decisions:
+  - Added `META_CLOSE_TAB` and a daemon `close_tab` meta handler that calls `Target.closeTarget`, defaults to the current attached target when `target_id` is omitted, clears stale attachment/dialog state for closed current tabs, and best-effort reattaches to another real page.
+  - Exposed `close-tab` through `bhrun`, the top-level `browser-harness` facade, `bh-wasm-host` manifest/config, and `bh_guest_sdk::close_tab`.
+  - Extended tab smoke coverage and the tab-response Rust guest to close temporary tabs after verification.
+  - Mapped the HubSpot upstream domain skill into `domains/hubspot/private-app-webhooks.md`; legacy upstream roots are represented by the `domains/` mapping convention documented in `domains/README.md`, not duplicated as `domain-skills/` or `agent-workspace/domain-skills/` directories.
+  - Updated tab usage docs, Python subprocess wrapper examples, and README snippets for `close-tab`.
+
+## Daily Sync Verification Evidence — 2026-05-20
+
+- Pending in this worktree before final commit: `cargo fmt --check`, `cargo check`, `cargo test`, CLI smoke checks, `git diff --check`, and secret scan/macOS equivalent.

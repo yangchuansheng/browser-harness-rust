@@ -10,13 +10,14 @@ use std::time::Duration;
 use bh_cdp::{is_browser_level_method, CdpClient, CdpEvent};
 use bh_discovery::{get_ws_url, is_internal_url, runtime_paths, RuntimePaths};
 use bh_protocol::{
-    DaemonRequest, DaemonResponse, META_CLICK, META_CONFIGURE_DOWNLOADS, META_CONNECTION_STATUS,
-    META_CURRENT_TAB, META_DISPATCH_KEY, META_DRAIN_EVENTS, META_ENSURE_REAL_TAB, META_GET_COOKIES,
-    META_GOTO, META_HANDLE_DIALOG, META_IFRAME_TARGET, META_JS, META_LIST_TABS, META_MOUSE_DOWN,
-    META_MOUSE_MOVE, META_MOUSE_UP, META_NEW_TAB, META_PAGE_INFO, META_PENDING_DIALOG, META_PING,
-    META_PRESS_KEY, META_PRINT_PDF, META_SCREENSHOT, META_SCROLL, META_SESSION, META_SET_COOKIES,
-    META_SET_SESSION, META_SET_VIEWPORT, META_SHUTDOWN, META_SWITCH_TAB, META_TYPE_TEXT,
-    META_UPLOAD_FILE, META_WAIT_FOR_LOAD,
+    DaemonRequest, DaemonResponse, META_CLICK, META_CLOSE_TAB, META_CONFIGURE_DOWNLOADS,
+    META_CONNECTION_STATUS, META_CURRENT_TAB, META_DISPATCH_KEY, META_DRAIN_EVENTS,
+    META_ENSURE_REAL_TAB, META_GET_COOKIES, META_GOTO, META_HANDLE_DIALOG, META_IFRAME_TARGET,
+    META_JS, META_LIST_TABS, META_MOUSE_DOWN, META_MOUSE_MOVE, META_MOUSE_UP, META_NEW_TAB,
+    META_PAGE_INFO, META_PENDING_DIALOG, META_PING, META_PRESS_KEY, META_PRINT_PDF,
+    META_SCREENSHOT, META_SCROLL, META_SESSION, META_SET_COOKIES, META_SET_SESSION,
+    META_SET_VIEWPORT, META_SHUTDOWN, META_SWITCH_TAB, META_TYPE_TEXT, META_UPLOAD_FILE,
+    META_WAIT_FOR_LOAD,
 };
 use bh_remote::BrowserUseClient;
 use serde_json::{json, Value};
@@ -406,6 +407,48 @@ impl Daemon {
                 .await?;
         }
         Ok(Value::String(target_id))
+    }
+
+    async fn close_tab_result(&self, target_id: Option<&str>) -> Result<Value, String> {
+        let target_id = match target_id {
+            Some(target_id) if !target_id.trim().is_empty() => target_id.to_string(),
+            _ => self
+                .current_target()
+                .await
+                .ok_or_else(|| "not_attached".to_string())?,
+        };
+        let closing_current = self.current_target().await.as_deref() == Some(target_id.as_str());
+        let previous_session = if closing_current {
+            self.current_session().await
+        } else {
+            None
+        };
+
+        if let Some(session_id) = previous_session.as_deref() {
+            self.unmark_session(session_id).await;
+        }
+
+        self.cdp
+            .send_raw("Target.closeTarget", json!({"targetId": target_id}), None)
+            .await?;
+
+        if closing_current {
+            {
+                let mut state = self.state.lock().await;
+                state.clear_session();
+                state.dialog = None;
+            }
+            if let Ok(Some(tab)) = self.first_real_page().await {
+                if let Some(next_target_id) = tab.get("targetId").and_then(Value::as_str) {
+                    if self.switch_tab_result(next_target_id).await.is_err() {
+                        let mut state = self.state.lock().await;
+                        state.clear_session();
+                    }
+                }
+            }
+        }
+
+        Ok(Value::Bool(true))
     }
 
     async fn ensure_real_tab_result(&self) -> Result<Value, String> {
@@ -1171,6 +1214,23 @@ impl Daemon {
                     .and_then(Value::as_str)
                     .unwrap_or("about:blank");
                 match self.new_tab_result(url).await {
+                    Ok(result) => DaemonResponse {
+                        result: Some(result),
+                        ..DaemonResponse::default()
+                    },
+                    Err(err) => DaemonResponse {
+                        error: Some(err),
+                        ..DaemonResponse::default()
+                    },
+                }
+            }
+            Some(META_CLOSE_TAB) => {
+                let target_id = request
+                    .params
+                    .as_ref()
+                    .and_then(|params| params.get("target_id"))
+                    .and_then(Value::as_str);
+                match self.close_tab_result(target_id).await {
                     Ok(result) => DaemonResponse {
                         result: Some(result),
                         ..DaemonResponse::default()

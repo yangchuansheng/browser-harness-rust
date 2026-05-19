@@ -15,6 +15,7 @@ pub const META_LIST_TABS: &str = "list_tabs";
 pub const META_CURRENT_TAB: &str = "current_tab";
 pub const META_SWITCH_TAB: &str = "switch_tab";
 pub const META_NEW_TAB: &str = "new_tab";
+pub const META_CLOSE_TAB: &str = "close_tab";
 pub const META_ENSURE_REAL_TAB: &str = "ensure_real_tab";
 pub const META_IFRAME_TARGET: &str = "iframe_target";
 pub const META_WAIT_FOR_LOAD: &str = "wait_for_load";

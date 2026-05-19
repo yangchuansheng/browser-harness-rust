@@ -1,5 +1,5 @@
 use bh_protocol::{
-    META_CLICK, META_CONFIGURE_DOWNLOADS, META_CURRENT_TAB, META_DISPATCH_KEY,
+    META_CLICK, META_CLOSE_TAB, META_CONFIGURE_DOWNLOADS, META_CURRENT_TAB, META_DISPATCH_KEY,
     META_ENSURE_REAL_TAB, META_FILL_INPUT, META_GET_COOKIES, META_GOTO, META_HANDLE_DIALOG,
     META_IFRAME_TARGET, META_JS, META_LIST_TABS, META_MOUSE_DOWN, META_MOUSE_MOVE, META_MOUSE_UP,
     META_NEW_TAB, META_PAGE_INFO, META_PRESS_KEY, META_PRINT_PDF, META_SCREENSHOT, META_SCROLL,
@@ -199,6 +199,14 @@ pub struct SwitchTabRequest {
     #[serde(default = "default_daemon_name")]
     pub daemon_name: String,
     pub target_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CloseTabRequest {
+    #[serde(default = "default_daemon_name")]
+    pub daemon_name: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_id: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -760,6 +768,15 @@ impl Default for NewTabRequest {
     }
 }
 
+impl Default for CloseTabRequest {
+    fn default() -> Self {
+        Self {
+            daemon_name: default_daemon_name(),
+            target_id: None,
+        }
+    }
+}
+
 impl Default for PageInfoRequest {
     fn default() -> Self {
         Self {
@@ -1060,6 +1077,24 @@ impl SwitchTabRequest {
                 self.daemon_name.clone()
             },
             target_id: self.target_id.clone(),
+        }
+    }
+}
+
+impl CloseTabRequest {
+    pub fn normalized(&self) -> Self {
+        Self {
+            daemon_name: if self.daemon_name.trim().is_empty() {
+                default_daemon_name()
+            } else {
+                self.daemon_name.clone()
+            },
+            target_id: self
+                .target_id
+                .as_deref()
+                .map(str::trim)
+                .filter(|target_id| !target_id.is_empty())
+                .map(str::to_string),
         }
     }
 }
@@ -1859,6 +1894,10 @@ pub fn default_operations() -> Vec<HostOperation> {
         ),
         compatibility_helper(META_NEW_TAB, "Create and attach a new page target."),
         compatibility_helper(
+            META_CLOSE_TAB,
+            "Close a specific page target, or the current target when omitted.",
+        ),
+        compatibility_helper(
             META_SWITCH_TAB,
             "Activate and attach a specific page target.",
         ),
@@ -2384,15 +2423,16 @@ mod tests {
         console_event_filter, console_event_matches, default_manifest, default_runner_config,
         dialog_event_filter, event_matches_filter, load_event_filter, operation_names,
         request_will_be_sent_filter, response_received_filter, CdpRawRequest, ClickRequest,
-        ConfigureDownloadsRequest, CurrentSessionRequest, CurrentTabRequest, DispatchKeyRequest,
-        EnsureRealTabRequest, EventFilter, ExecutionModel, GetCookiesRequest, GotoRequest,
-        GuestTransport, HandleDialogRequest, HttpGetRequest, IframeTargetRequest, JsRequest,
-        ListTabsRequest, MouseDownRequest, MouseMoveRequest, MouseUpRequest, NewTabRequest,
-        PageInfoRequest, PressKeyRequest, PrintPdfRequest, ProtocolFamilyKind, ScreenshotRequest,
-        ScrollRequest, SetCookiesRequest, SetViewportRequest, Stability, SwitchTabRequest,
-        TypeTextRequest, UploadFileRequest, WaitForConsoleRequest, WaitForDialogRequest,
-        WaitForDownloadRequest, WaitForEventRequest, WaitForLoadEventRequest, WaitForLoadRequest,
-        WaitForRequestRequest, WaitForResponseRequest, WatchEventsLine, WatchEventsRequest,
+        CloseTabRequest, ConfigureDownloadsRequest, CurrentSessionRequest, CurrentTabRequest,
+        DispatchKeyRequest, EnsureRealTabRequest, EventFilter, ExecutionModel, GetCookiesRequest,
+        GotoRequest, GuestTransport, HandleDialogRequest, HttpGetRequest, IframeTargetRequest,
+        JsRequest, ListTabsRequest, MouseDownRequest, MouseMoveRequest, MouseUpRequest,
+        NewTabRequest, PageInfoRequest, PressKeyRequest, PrintPdfRequest, ProtocolFamilyKind,
+        ScreenshotRequest, ScrollRequest, SetCookiesRequest, SetViewportRequest, Stability,
+        SwitchTabRequest, TypeTextRequest, UploadFileRequest, WaitForConsoleRequest,
+        WaitForDialogRequest, WaitForDownloadRequest, WaitForEventRequest, WaitForLoadEventRequest,
+        WaitForLoadRequest, WaitForRequestRequest, WaitForResponseRequest, WatchEventsLine,
+        WatchEventsRequest,
     };
     use std::collections::BTreeMap;
 
@@ -2432,6 +2472,7 @@ mod tests {
         let names = operation_names();
 
         assert!(names.contains(&"page_info"));
+        assert!(names.contains(&"close_tab"));
         assert!(names.contains(&"current_session"));
         assert!(names.contains(&"wait_for_event"));
         assert!(names.contains(&"watch_events"));
@@ -2689,6 +2730,24 @@ mod tests {
 
         assert_eq!(normalized.daemon_name, "default");
         assert_eq!(normalized.target_id, "target-7");
+    }
+
+    #[test]
+    fn close_tab_request_normalizes_blank_name_and_target() {
+        let request = CloseTabRequest {
+            daemon_name: "   ".to_string(),
+            target_id: Some(" target-7 ".to_string()),
+        };
+        let normalized = request.normalized();
+
+        assert_eq!(normalized.daemon_name, "default");
+        assert_eq!(normalized.target_id.as_deref(), Some("target-7"));
+
+        let request = CloseTabRequest {
+            daemon_name: "runner".to_string(),
+            target_id: Some("   ".to_string()),
+        };
+        assert_eq!(request.normalized().target_id, None);
     }
 
     #[test]

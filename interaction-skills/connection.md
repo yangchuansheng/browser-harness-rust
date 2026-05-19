@@ -9,6 +9,7 @@ The Rust-native path is:
 - `bhrun current-tab`
 - `bhrun ensure-real-tab`
 - `bhrun switch-tab`
+- `bhrun close-tab`
 
 ## The Real Problem
 
@@ -46,6 +47,7 @@ JSON
 - prefer `ensure-real-tab` before a browser-first workflow starts
 - use `switch-tab` when you already know the target id you want
 - treat `new-tab` as a creation primitive, not as visibility proof
+- call `close-tab` for temporary tabs once the workflow no longer needs them
 - if `page_info()` shows `w=0` or `h=0`, recover the attachment instead of
   continuing blindly
 
