@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `ea7d1710ba8621c658d6d61fe46bcf77746e83e4`
-- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..ea7d1710ba8621c658d6d61fe46bcf77746e83e4`
-- Count: 256 commits
+- Upstream target commit: `9da5ec2e52a30ed74752366d89075cbc3821a445`
+- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..9da5ec2e52a30ed74752366d89075cbc3821a445`
+- Count: 260 commits
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -146,6 +146,24 @@
   - Mapped the HubSpot upstream domain skill into `domains/hubspot/private-app-webhooks.md`; legacy upstream roots are represented by the `domains/` mapping convention documented in `domains/README.md`, not duplicated as `domain-skills/` or `agent-workspace/domain-skills/` directories.
   - Updated tab usage docs, Python subprocess wrapper examples, and README snippets for `close-tab`.
 
-## Daily Sync Verification Evidence — 2026-05-20
+## Daily Sync Verification Evidence — 2026-05-21
 
-- Pending in this worktree before final commit: `cargo fmt --check`, `cargo check`, `cargo test`, CLI smoke checks, `git diff --check`, and secret scan/macOS equivalent.
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check` passed.
+- `cargo check --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed and exposes the Rust facade command list.
+- `git diff --check` passed.
+- `scripts/scan_sensitive.sh` still requires Bash 4 `mapfile`; a macOS-compatible Python equivalent of the same regex checks passed with no obvious secrets or local path leaks.
+
+## Daily Upstream Sync — 2026-05-21
+
+- Fetched `origin/main` and `upstream/main`; local `main` started clean and equal to `origin/main`.
+- Previous target: `ea7d1710ba8621c658d6d61fe46bcf77746e83e4`; new upstream target: `9da5ec2e52a30ed74752366d89075cbc3821a445`.
+- New upstream range `ea7d1710ba8621c658d6d61fe46bcf77746e83e4..9da5ec2e52a30ed74752366d89075cbc3821a445`: 2 non-merge commits.
+- Upstream changes analyzed:
+  - `ae83151`: deleted stale top-level `domain-skills/amazon/cart.md` and `domain-skills/amazon/orders.md`.
+  - `ad7f4f2`: removed Firecrawl mentions from `agent-workspace/domain-skills/facebook/groups.md` and `agent-workspace/domain-skills/facebook/pages.md`, switching to vendor-neutral downstream-extractor language.
+- Rust migration decisions:
+  - Deleted `domains/amazon/cart.md` and `domains/amazon/orders.md` to match the upstream cleanup; these files were mapped from the legacy `domain-skills/` path.
+  - Updated `domains/facebook/groups.md` and `domains/facebook/pages.md` to remove Firecrawl references with vendor-neutral phrasing, matching the upstream semantic changes.
