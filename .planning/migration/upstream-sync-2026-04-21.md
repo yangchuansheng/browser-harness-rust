@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `9da5ec2e52a30ed74752366d89075cbc3821a445`
-- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..9da5ec2e52a30ed74752366d89075cbc3821a445`
-- Count: 260 commits
+- Upstream target commit: `6d20866664ea3d9691b27bbf64f42ae097437dc3`
+- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..6d20866664ea3d9691b27bbf64f42ae097437dc3`
+- Count: 262 commits
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -38,6 +38,7 @@
 
 - Imported upstream domain-skill corpus into `domains/` with upstream
   `scraping.md` mapped to this fork's `skill.md` convention.
+- Added the QuickBooks Online (`qbo`) report-export domain skill from upstream PR #314 as `domains/qbo/report-export.md`.
 - Imported upstream issue templates and `VOUCHED.td`.
 - Imported `docs/snap-linux-headless.md` and `docs/allow-remote-debugging.png`.
 - Updated `SKILL.md`, `install.md`, `README.md`, `domains/README.md`, and
@@ -167,3 +168,24 @@
 - Rust migration decisions:
   - Deleted `domains/amazon/cart.md` and `domains/amazon/orders.md` to match the upstream cleanup; these files were mapped from the legacy `domain-skills/` path.
   - Updated `domains/facebook/groups.md` and `domains/facebook/pages.md` to remove Firecrawl references with vendor-neutral phrasing, matching the upstream semantic changes.
+
+## Daily Upstream Sync — 2026-05-22
+
+- Fetched `origin/main` and `upstream/main`; local `main` started clean and equal to `origin/main`.
+- Previous target: `9da5ec2e52a30ed74752366d89075cbc3821a445`; new upstream target: `6d20866664ea3d9691b27bbf64f42ae097437dc3`.
+- New upstream range `9da5ec2e52a30ed74752366d89075cbc3821a445..6d20866664ea3d9691b27bbf64f42ae097437dc3`: 2 commits (1 non-merge commit + 1 merge).
+- Upstream changes analyzed:
+  - `1583bd7c0b98629bfabcfd6e61051138de9495f1`: added `agent-workspace/domain-skills/qbo/report-export.md` for QuickBooks Online custom report PDF export.
+- Rust migration decisions:
+  - Mapped the upstream domain skill to `domains/qbo/report-export.md` following the `domains/` convention.
+  - No Rust code changes were needed because this is a documentation-only domain skill.
+
+## Daily Sync Verification Evidence — 2026-05-22
+
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check` passed.
+- `cargo check --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed.
+- `git diff --check` passed.
+- `scripts/scan_sensitive.sh` still requires Bash 4 `mapfile` on macOS `/bin/bash`; a macOS-compatible Python equivalent of the same regex checks passed with no obvious secrets or local path leaks.
