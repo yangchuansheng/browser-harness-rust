@@ -189,3 +189,33 @@
 - `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed.
 - `git diff --check` passed.
 - `scripts/scan_sensitive.sh` still requires Bash 4 `mapfile` on macOS `/bin/bash`; a macOS-compatible Python equivalent of the same regex checks passed with no obvious secrets or local path leaks.
+
+## Daily Upstream Sync — 2026-06-15
+
+- Fetched `origin/main` and `upstream/main`; local `main` started clean and equal to `origin/main`.
+- Previous target: `6d20866664ea3d9691b27bbf64f42ae097437dc3`; new upstream target: `2cfaa7ea4c77b17b4c2434403865fa4b6d637b29`.
+- New upstream range `6d20866664ea3d9691b27bbf64f42ae097437dc3..2cfaa7ea4c77b17b4c2434403865fa4b6d637b29`: 5 non-merge commits plus merge commits on `upstream/main`.
+- Upstream changes analyzed:
+  - `f20e4aa` / PR #443: Added plugin manifest and skill files for agent marketplaces (`.claude-plugin/marketplace.json`, `.claude-plugin/plugin.json`, `skills/browser-harness/SKILL.md`, `skills/browser-harness/references/install.md`).
+  - `fdad2e5`: Updated `.claude-plugin` to use Claude marketplace source format.
+  - `7b01296`: Reverted PR #443 (the add-plugin-manifest merge).
+  - `2baa4a2`: Re-added plugin manifest and skill as canonical, no-drift source of truth (same 4 files).
+  - `5421622`: Removed `.grok-plugin` manifest, keeping only the Claude Code `.claude-plugin/` and `skills/` entries.
+- Net upstream effect: 4 new documentation/plugin-manifest files for Claude Code agent marketplace integration.
+- Rust migration decisions:
+  - Created `.claude-plugin/marketplace.json` adapted for the Rust fork: repo URL points to `yangchuansheng/browser-harness-rust`, description mentions Rust-native CLI.
+  - Created `.claude-plugin/plugin.json` adapted for the Rust fork: author/URLs reference `yangchuansheng/browser-harness-rust`, keywords include `rust`.
+  - Created `skills/browser-harness/SKILL.md` adapted for the Rust fork: CLI commands use JSON-heredoc format (`browser-harness page-info <<'JSON'...`), references `domains/` instead of upstream `agent-workspace/domain-skills/`, all operations mapped to `browser-harness` Rust CLI subcommands.
+  - Created `skills/browser-harness/references/install.md`: installation uses `cargo run -- install` + `$CARGO_HOME/bin` instead of upstream pip/uv; clone URL is the Rust fork.
+  - No Rust code changes were needed — all changes are documentation/plugin-manifest only.
+  - No Python runtime files were copied; no domain-skill files were added or modified.
+
+## Daily Sync Verification Evidence — 2026-06-15
+
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check` passed.
+- `cargo check --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed.
+- `git diff --check` passed.
+- `scripts/scan_sensitive.sh` still requires Bash 4 `mapfile` on macOS `/bin/bash`; a macOS-compatible Python/rg scan passed with no obvious secrets or local path leaks in tracked/unignored files.

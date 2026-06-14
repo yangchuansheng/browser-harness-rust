@@ -1,0 +1,13 @@
+{
+  "name": "browser-harness",
+  "version": "0.1.0",
+  "description": "Direct browser control via CDP. Drives the user's real Chrome (or a Browser Use cloud browser) with coordinate clicks, screenshots, and a Rust-native CLI — no selector hunting. Requires the one-time `browser-harness` Rust CLI install (see the skill's references/install.md).",
+  "author": {
+    "name": "yangchuansheng",
+    "url": "https://github.com/yangchuansheng"
+  },
+  "homepage": "https://github.com/yangchuansheng/browser-harness-rust",
+  "repository": "https://github.com/yangchuansheng/browser-harness-rust",
+  "license": "MIT",
+  "keywords": ["browser", "automation", "cdp", "chrome", "scraping", "screenshot", "browser-use", "browser-harness", "rust"]
+}

@@ -1,0 +1,26 @@
+{
+  "name": "browser-harness",
+  "description": "Install browser-harness (Rust fork) directly from this repo.",
+  "owner": {
+    "name": "yangchuansheng",
+    "url": "https://github.com/yangchuansheng/browser-harness-rust"
+  },
+  "plugins": [
+    {
+      "name": "browser-harness",
+      "description": "Direct CDP browser control for agents: coordinate clicks, screenshots, Rust-native CLI, local Chrome or Browser Use cloud. Ships skills only; the `browser-harness` Rust CLI is a one-time install prerequisite.",
+      "category": "automation",
+      "source": ".",
+      "homepage": "https://github.com/yangchuansheng/browser-harness-rust",
+      "keywords": [
+        "browser",
+        "automation",
+        "cdp",
+        "chrome",
+        "scraping",
+        "screenshot",
+        "rust"
+      ]
+    }
+  ]
+}
