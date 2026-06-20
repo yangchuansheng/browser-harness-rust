@@ -5,6 +5,8 @@
 Browser Harness is a thin, Rust-native browser runtime for agents. It connects
 LLMs to a real browser over CDP without adding a large framework in between.
 
+Try browser-harness in [Browser Use Cloud](https://cloud.browser-use.com/v4?utm_campaign=browser-harness-use-in-cloud&utm_source=github) or paste the setup prompt into your coding agent.
+
 It exposes stable browser operations, keeps the control plane small, and still
 lets the agent extend missing behavior mid-task when it needs to.
 

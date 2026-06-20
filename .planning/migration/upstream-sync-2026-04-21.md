@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `2cfaa7ea4c77b17b4c2434403865fa4b6d637b29`
-- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..2cfaa7ea4c77b17b4c2434403865fa4b6d637b29`
-- Count: 271 commits
+- Upstream target commit: `a606cf773d3f9553fd56dee9638cd7de34d3b765`
+- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..a606cf773d3f9553fd56dee9638cd7de34d3b765`
+- Count: 273 commits
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -219,3 +219,17 @@
 - `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed.
 - `git diff --check` passed.
 - `scripts/scan_sensitive.sh` still requires Bash 4 `mapfile` on macOS `/bin/bash`; a macOS-compatible Python/rg scan passed with no obvious secrets or local path leaks in tracked/unignored files.
+
+## Daily Upstream Sync — 2026-06-21
+
+- Fetched `origin/main` and `upstream/main`; local `main` started clean and equal to `origin/main`.
+- Previous target: `2cfaa7ea4c77b17b4c2434403865fa4b6d637b29`; new upstream target: `a606cf773d3f9553fd56dee9638cd7de34d3b765`.
+- New upstream range `2cfaa7ea4c77b17b4c2434403865fa4b6d637b29..a606cf773d3f9553fd56dee9638cd7de34d3b765`: 2 README-only commits.
+- Upstream changes analyzed:
+  - `a5d7a18`: updated `README.md` with Browser Use Cloud promotion copy.
+  - `b03f199`: updated `README.md` with the final Browser Use Cloud promotion copy.
+- Net upstream effect: inserted a Browser Use Cloud link near the top of `README.md` before the setup prompt context.
+- Rust migration decisions:
+  - Added the same Browser Use Cloud promotion sentence to the Rust fork `README.md` after the opening description and before the Rust-specific capability overview.
+  - No Rust code changes were needed because the upstream range is documentation-only.
+  - No Python runtime files were copied.
