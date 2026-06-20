@@ -233,3 +233,13 @@
   - Added the same Browser Use Cloud promotion sentence to the Rust fork `README.md` after the opening description and before the Rust-specific capability overview.
   - No Rust code changes were needed because the upstream range is documentation-only.
   - No Python runtime files were copied.
+
+## Daily Sync Verification Evidence — 2026-06-21
+
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check` passed.
+- `cargo check --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed.
+- `git diff --check` passed.
+- `./scripts/scan_sensitive.sh` could not run because `rg` is not installed in this cron environment; a Python fallback using the script's exact regex rules passed with no obvious secrets or local path leaks.
