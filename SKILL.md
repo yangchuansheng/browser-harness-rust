@@ -82,7 +82,7 @@ screenshot_with_max_dim, close_tab}`.
 
 ### Remote browsers
 
-Use remote for **parallel sub-agents** (each gets its own isolated browser via a distinct `BU_NAME`) or on a headless server. `BROWSER_USE_API_KEY` must be set.
+Use remote for **parallel sub-agents** (each gets its own isolated browser via a distinct `BU_NAME`) or on a headless server. Set `BROWSER_USE_API_KEY` or run `browser-harness auth login --api-key-stdin` once; inspect with `browser-harness auth status`.
 
 ```bash
 browser-harness create-browser <<'JSON'

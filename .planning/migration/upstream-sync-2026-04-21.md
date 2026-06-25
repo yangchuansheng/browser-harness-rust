@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `a606cf773d3f9553fd56dee9638cd7de34d3b765`
-- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..a606cf773d3f9553fd56dee9638cd7de34d3b765`
-- Count: 273 commits
+- Upstream target commit: `7594909e7963c9ba328e39cc79e9f20ff94b2a82`
+- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..7594909e7963c9ba328e39cc79e9f20ff94b2a82`
+- Count: 285 commits
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -241,5 +241,34 @@
 - `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed.
 - `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary` passed.
 - `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed.
+- `git diff --check` passed.
+- `./scripts/scan_sensitive.sh` could not run because `rg` is not installed in this cron environment; a Python fallback using the script's exact regex rules passed with no obvious secrets or local path leaks.
+
+## Daily Upstream Sync — 2026-06-26
+
+- Fetched `origin/main` and `upstream/main`; local `main` started at `304d28d5adbc2ac25d2af59850cda3b5b12b0ede`, equal to `origin/main` before the sync.
+- Previous target: `a606cf773d3f9553fd56dee9638cd7de34d3b765`; new upstream target: `7594909e7963c9ba328e39cc79e9f20ff94b2a82`.
+- New upstream range `a606cf773d3f9553fd56dee9638cd7de34d3b765..7594909e7963c9ba328e39cc79e9f20ff94b2a82`: 12 non-merge commits plus release workflow and packaging changes.
+- Upstream changes analyzed:
+  - Added release-ready Python packaging, root `browser-harness` wrapper, release workflow, and package version bumps through `0.1.3`.
+  - Added Browser Use Cloud auth storage with `auth login`, `auth status`, and `auth logout` flows.
+  - Added opt-out telemetry support and docs for telemetry state.
+  - Clarified remote daemon/cloud browser flow and install/update guidance.
+  - Hardened IPC/admin paths and packaged skill/install docs.
+- Rust migration decisions:
+  - Kept the Rust workspace and installer as the packaging source of truth; bumped the Rust workspace package version to `0.1.3` instead of copying Python packaging or release workflow files.
+  - Added Rust-native Browser Use auth storage in `bh-remote`, using `BROWSER_USE_API_KEY` first and a private JSON auth file under the Browser Harness config directory second.
+  - Exposed `browser-harness auth status`, `browser-harness auth login --api-key-stdin`, JSON `auth login`, and `browser-harness auth logout` through `bhctl` and the top-level facade.
+  - Updated cloud browser docs and `SKILL.md` so agents can authenticate once without keeping the API key in every environment.
+  - Did not copy Python runtime files or external telemetry POST behavior; no Rust telemetry network path was added.
+
+## Daily Sync Verification Evidence — 2026-06-26
+
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check` initially reported rustfmt-only changes; `cargo fmt --manifest-path rust/Cargo.toml --all` was run and the follow-up check passed.
+- `cargo check --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed and lists `auth` as an admin command.
+- `BH_CONFIG_DIR=/tmp/browser-harness-rust-auth-smoke env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- auth status` passed with `status: missing` and the override auth path.
 - `git diff --check` passed.
 - `./scripts/scan_sensitive.sh` could not run because `rg` is not installed in this cron environment; a Python fallback using the script's exact regex rules passed with no obvious secrets or local path leaks.

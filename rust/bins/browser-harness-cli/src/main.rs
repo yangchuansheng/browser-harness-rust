@@ -6,6 +6,7 @@ use std::process::{Command, Stdio};
 use serde_json::json;
 
 const ADMIN_COMMANDS: &[&str] = &[
+    "auth",
     "create-browser",
     "list-browsers",
     "stop-browser",
@@ -688,6 +689,7 @@ mod tests {
 
     #[test]
     fn routes_admin_commands_to_bhctl() {
+        assert_eq!(route_command("auth"), Route::Admin);
         assert_eq!(route_command("ensure-daemon"), Route::Admin);
         assert_eq!(route_command("create-browser"), Route::Admin);
     }

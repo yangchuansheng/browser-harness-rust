@@ -1,7 +1,11 @@
+use std::fs;
+use std::path::{Path, PathBuf};
+
 use serde_json::json;
 use serde_json::Value;
 
 pub const DEFAULT_API_BASE: &str = "https://api.browser-use.com/api/v3";
+pub const BROWSER_USE_API_KEY_ENV: &str = "BROWSER_USE_API_KEY";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BrowserUseClient {
@@ -181,6 +185,232 @@ impl BrowserUseClient {
     }
 }
 
+pub fn browser_use_api_key() -> Result<String, String> {
+    if let Ok(raw) = std::env::var(BROWSER_USE_API_KEY_ENV) {
+        let value = raw.trim();
+        if !value.is_empty() {
+            return Ok(value.to_string());
+        }
+    }
+
+    stored_browser_use_api_key()?.ok_or_else(|| {
+        "BROWSER_USE_API_KEY missing -- run `browser-harness auth login --api-key-stdin` or export BROWSER_USE_API_KEY".to_string()
+    })
+}
+
+pub fn auth_status() -> Value {
+    let path = auth_path();
+    if let Ok(raw) = std::env::var(BROWSER_USE_API_KEY_ENV) {
+        if !raw.trim().is_empty() {
+            return json!({
+                "status": "authenticated",
+                "source": "env",
+                "path": path.display().to_string(),
+            });
+        }
+    }
+
+    match stored_browser_use_api_key() {
+        Ok(Some(_)) => json!({
+            "status": "authenticated",
+            "source": "stored",
+            "path": path.display().to_string(),
+        }),
+        Ok(None) => json!({
+            "status": "missing",
+            "source": Value::Null,
+            "path": path.display().to_string(),
+        }),
+        Err(err) => json!({
+            "status": "error",
+            "source": Value::Null,
+            "path": path.display().to_string(),
+            "reason": err,
+        }),
+    }
+}
+
+pub fn store_browser_use_api_key(raw: &str) -> Result<Value, String> {
+    let api_key = normalize_api_key(raw)?;
+    let path = auth_path();
+    let mut data = load_auth_file(&path)?;
+    let object = data
+        .as_object_mut()
+        .ok_or_else(|| format!("auth file root must be a JSON object: {}", path.display()))?;
+    object.insert(
+        "browser_use".to_string(),
+        json!({
+            "api_key": api_key,
+            "source": "manual",
+        }),
+    );
+    write_private_json(&path, &data)?;
+    Ok(json!({
+        "status": "stored",
+        "path": path.display().to_string(),
+    }))
+}
+
+pub fn clear_browser_use_auth() -> Result<Value, String> {
+    let path = auth_path();
+    let mut data = load_auth_file(&path)?;
+    let Some(object) = data.as_object_mut() else {
+        return Err(format!(
+            "auth file root must be a JSON object: {}",
+            path.display()
+        ));
+    };
+    let removed = object.remove("browser_use").is_some();
+    if object.is_empty() {
+        match fs::remove_file(&path) {
+            Ok(()) => {}
+            Err(err) if err.kind() == std::io::ErrorKind::NotFound => {}
+            Err(err) => return Err(format!("remove auth file {}: {err}", path.display())),
+        }
+    } else {
+        write_private_json(&path, &data)?;
+    }
+    Ok(json!({
+        "status": if removed { "logged-out" } else { "missing" },
+        "path": path.display().to_string(),
+    }))
+}
+
+fn stored_browser_use_api_key() -> Result<Option<String>, String> {
+    let path = auth_path();
+    let data = load_auth_file(&path)?;
+    Ok(data
+        .get("browser_use")
+        .and_then(Value::as_object)
+        .and_then(|record| record.get("api_key"))
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(str::to_string))
+}
+
+fn auth_path() -> PathBuf {
+    if let Some(path) = std::env::var_os("BH_AUTH_PATH") {
+        return PathBuf::from(path);
+    }
+    config_dir().join("auth.json")
+}
+
+fn config_dir() -> PathBuf {
+    if let Some(path) = std::env::var_os("BH_CONFIG_DIR") {
+        return PathBuf::from(path);
+    }
+    if let Some(path) =
+        std::env::var_os("BH_HOME").or_else(|| std::env::var_os("BROWSER_HARNESS_HOME"))
+    {
+        return PathBuf::from(path);
+    }
+    if let Some(path) = std::env::var_os("XDG_CONFIG_HOME") {
+        return PathBuf::from(path).join("browser-harness");
+    }
+    home_dir()
+        .map(|path| path.join(".config").join("browser-harness"))
+        .unwrap_or_else(|| PathBuf::from(".browser-harness"))
+}
+
+fn home_dir() -> Option<PathBuf> {
+    std::env::var_os("HOME")
+        .or_else(|| std::env::var_os("USERPROFILE"))
+        .map(PathBuf::from)
+        .or_else(|| {
+            let drive = std::env::var_os("HOMEDRIVE")?;
+            let path = std::env::var_os("HOMEPATH")?;
+            let mut combined = std::ffi::OsString::from(drive);
+            combined.push(path);
+            Some(PathBuf::from(combined))
+        })
+}
+
+fn load_auth_file(path: &Path) -> Result<Value, String> {
+    match fs::read_to_string(path) {
+        Ok(raw) => {
+            let value = serde_json::from_str::<Value>(&raw)
+                .map_err(|err| format!("auth file is not valid JSON: {}: {err}", path.display()))?;
+            if value.is_object() {
+                Ok(value)
+            } else {
+                Err(format!(
+                    "auth file root must be a JSON object: {}",
+                    path.display()
+                ))
+            }
+        }
+        Err(err) if err.kind() == std::io::ErrorKind::NotFound => Ok(json!({})),
+        Err(err) => Err(format!("read auth file {}: {err}", path.display())),
+    }
+}
+
+fn write_private_json(path: &Path, data: &Value) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        let existed = parent.exists();
+        fs::create_dir_all(parent)
+            .map_err(|err| format!("create auth directory {}: {err}", parent.display()))?;
+        if !existed {
+            chmod_private_dir(parent);
+        }
+    }
+
+    let tmp = path.with_file_name(format!(
+        "{}.tmp",
+        path.file_name()
+            .and_then(|value| value.to_str())
+            .unwrap_or("auth.json")
+    ));
+    let mut raw = serde_json::to_vec_pretty(data)
+        .map_err(|err| format!("serialize auth file {}: {err}", path.display()))?;
+    raw.push(b'\n');
+    fs::write(&tmp, raw).map_err(|err| format!("write auth file {}: {err}", tmp.display()))?;
+    chmod_private_file(&tmp);
+    fs::rename(&tmp, path).map_err(|err| {
+        format!(
+            "replace auth file {} with {}: {err}",
+            path.display(),
+            tmp.display()
+        )
+    })?;
+    chmod_private_file(path);
+    Ok(())
+}
+
+fn normalize_api_key(raw: &str) -> Result<String, String> {
+    let value = raw.trim();
+    if value.is_empty() {
+        return Err("no API key provided".to_string());
+    }
+    if !value.starts_with("bu_") {
+        return Err("Browser Use API key must start with bu_".to_string());
+    }
+    if value.len() < 20 {
+        return Err("Browser Use API key looks too short".to_string());
+    }
+    Ok(value.to_string())
+}
+
+#[cfg(unix)]
+fn chmod_private_dir(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+
+    let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o700));
+}
+
+#[cfg(not(unix))]
+fn chmod_private_dir(_path: &Path) {}
+
+#[cfg(unix)]
+fn chmod_private_file(path: &Path) {
+    use std::os::unix::fs::PermissionsExt;
+
+    let _ = fs::set_permissions(path, fs::Permissions::from_mode(0o600));
+}
+
+#[cfg(not(unix))]
+fn chmod_private_file(_path: &Path) {}
+
 pub fn resolve_profile_name_in_profiles(
     profiles: &[Value],
     profile_name: &str,
@@ -211,7 +441,7 @@ pub fn resolve_profile_name_in_profiles(
 mod tests {
     use serde_json::json;
 
-    use super::{resolve_profile_name_in_profiles, BrowserUseClient};
+    use super::{normalize_api_key, resolve_profile_name_in_profiles, BrowserUseClient};
 
     #[test]
     fn stop_browser_request_uses_expected_url_and_payload() {
@@ -266,5 +496,23 @@ mod tests {
         assert!(resolve_profile_name_in_profiles(&profiles, "dup")
             .unwrap_err()
             .contains("cloud profiles named"));
+    }
+
+    #[test]
+    fn normalize_api_key_accepts_browser_use_keys() {
+        assert_eq!(
+            normalize_api_key("  bu_12345678901234567890  ").unwrap(),
+            "bu_12345678901234567890"
+        );
+    }
+
+    #[test]
+    fn normalize_api_key_rejects_short_or_wrong_prefix_values() {
+        assert!(normalize_api_key("bu_short")
+            .unwrap_err()
+            .contains("too short"));
+        assert!(normalize_api_key("sk_12345678901234567890")
+            .unwrap_err()
+            .contains("must start with bu_"));
     }
 }

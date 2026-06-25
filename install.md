@@ -78,10 +78,13 @@ That makes new Codex or Claude Code sessions in other folders load the runtime b
 Browser Harness can attach to Browser Use cloud browsers or to a local
 Chrome/Chromium-family browser.
 
-**Cloud browsers.** Use `browser-harness create-browser` with
-`BROWSER_USE_API_KEY`; pass the returned `cdpWsUrl` to a daemon through
-`BU_CDP_WS`, and keep `BU_BROWSER_ID` so shutdown stops billing and persists the
-cloud profile state. Profile sync commands live in
+**Cloud browsers.** Authenticate once with `browser-harness auth login --api-key-stdin`
+or export `BROWSER_USE_API_KEY`; `browser-harness auth status` reports whether
+the key came from the environment or the stored auth file, and
+`browser-harness auth logout` removes the stored key. Use
+`browser-harness create-browser`; pass the returned `cdpWsUrl` to a daemon
+through `BU_CDP_WS`, and keep `BU_BROWSER_ID` so shutdown stops billing and
+persists the cloud profile state. Profile sync commands live in
 `interaction-skills/profile-sync.md` and sync cookies only.
 
 **Local Way 1 — real profile.** In the running browser, open
@@ -111,6 +114,8 @@ unattended automation must avoid popups.
 
 `BU_CDP_WS` always wins when already set. `BU_CDP_URL` resolves `/json/version`
 and falls back to `DevToolsActivePort` when newer Chrome builds return 404.
+`BH_CONFIG_DIR` overrides the default config directory for stored auth; `BH_HOME`
+or `BROWSER_HARNESS_HOME` can point all Browser Harness config at a custom root.
 `BH_RUNTIME_DIR` keeps socket/pid files in a short runtime path; `BH_TMP_DIR`
 keeps logs, screenshots, and debug artifacts in a separate temp path. For Snap
 or Flatpak browser troubleshooting, see [docs/snap-linux-headless.md](docs/snap-linux-headless.md).

@@ -6,7 +6,10 @@ use std::thread;
 use std::time::{Duration, Instant};
 
 use bh_daemon::{already_running, log_tail, stop_best_effort, DaemonConfig};
-use bh_remote::BrowserUseClient;
+use bh_remote::{
+    auth_status, browser_use_api_key, clear_browser_use_auth, store_browser_use_api_key,
+    BrowserUseClient,
+};
 use serde_json::{json, Value};
 
 #[tokio::main]
@@ -21,12 +24,13 @@ async fn run() -> Result<(), String> {
     let mut args = std::env::args().skip(1);
     let Some(command) = args.next() else {
         return Err(
-            "usage: bhctl <create-browser|list-browsers|stop-browser|list-cloud-profiles|resolve-profile-name|list-local-profiles|sync-local-profile|daemon-alive|ensure-daemon|restart-daemon|stop-daemon>"
+            "usage: bhctl <auth|create-browser|list-browsers|stop-browser|list-cloud-profiles|resolve-profile-name|list-local-profiles|sync-local-profile|daemon-alive|ensure-daemon|restart-daemon|stop-daemon>"
                 .to_string(),
         );
     };
 
     let output = match command.as_str() {
+        "auth" => auth_output(args.collect::<Vec<_>>())?,
         "create-browser" => {
             let client = browser_use_client()?;
             let mut payload = read_json_stdin()?.unwrap_or_else(|| json!({}));
@@ -76,7 +80,7 @@ async fn run() -> Result<(), String> {
         "restart-daemon" | "stop-daemon" => restart_daemon_output(args.next().as_deref())?,
         other => {
             return Err(format!(
-                "unknown bhctl command {:?}; expected create-browser, list-browsers, stop-browser, list-cloud-profiles, resolve-profile-name, list-local-profiles, sync-local-profile, daemon-alive, ensure-daemon, restart-daemon, or stop-daemon",
+                "unknown bhctl command {:?}; expected auth, create-browser, list-browsers, stop-browser, list-cloud-profiles, resolve-profile-name, list-local-profiles, sync-local-profile, daemon-alive, ensure-daemon, restart-daemon, or stop-daemon",
                 other
             ))
         }
@@ -116,9 +120,40 @@ fn read_json_stdin() -> Result<Option<Value>, String> {
 }
 
 fn browser_use_client() -> Result<BrowserUseClient, String> {
-    let api_key = std::env::var("BROWSER_USE_API_KEY")
-        .map_err(|_| "BROWSER_USE_API_KEY missing -- see .env.example".to_string())?;
+    let api_key = browser_use_api_key()?;
     Ok(BrowserUseClient::new(api_key))
+}
+
+fn auth_output(args: Vec<String>) -> Result<Value, String> {
+    match args.first().map(String::as_str).unwrap_or("status") {
+        "status" => Ok(auth_status()),
+        "login" => {
+            let api_key = if args.get(1).map(String::as_str) == Some("--api-key-stdin") {
+                let mut stdin = String::new();
+                io::stdin()
+                    .read_to_string(&mut stdin)
+                    .map_err(|err| format!("read API key from stdin: {err}"))?;
+                stdin
+            } else {
+                let payload = read_json_stdin()?.unwrap_or_else(|| json!({}));
+                payload
+                    .get("apiKey")
+                    .or_else(|| payload.get("api_key"))
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+                    .ok_or_else(|| {
+                        "usage: bhctl auth login --api-key-stdin OR JSON {\"apiKey\":\"bu_...\"} on stdin"
+                            .to_string()
+                    })?
+            };
+            store_browser_use_api_key(&api_key)
+        }
+        "logout" => clear_browser_use_auth(),
+        other => Err(format!(
+            "unknown bhctl auth command {:?}; expected status, login, or logout",
+            other
+        )),
+    }
 }
 
 fn daemon_alive_output(name: Option<&str>) -> Value {
@@ -252,9 +287,7 @@ fn list_local_profiles() -> Result<Value, String> {
 
 fn sync_local_profile() -> Result<Value, String> {
     ensure_profile_use_available()?;
-    if std::env::var("BROWSER_USE_API_KEY").is_err() {
-        return Err("BROWSER_USE_API_KEY missing".to_string());
-    }
+    let api_key = browser_use_api_key()?;
     let payload = read_json_stdin()?
         .ok_or_else(|| "sync-local-profile requires a JSON payload on stdin".to_string())?;
     let profile_name = payload
@@ -277,6 +310,7 @@ fn sync_local_profile() -> Result<Value, String> {
             .map(|items| items.iter().filter_map(Value::as_str).collect::<Vec<_>>())
             .unwrap_or_default(),
     );
+    cmd.env("BROWSER_USE_API_KEY", api_key);
     let output = cmd
         .output()
         .map_err(|err| format!("run profile-use sync: {err}"))?;
