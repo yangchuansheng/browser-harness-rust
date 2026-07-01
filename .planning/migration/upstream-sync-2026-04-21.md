@@ -272,3 +272,35 @@
 - `BH_CONFIG_DIR=/tmp/browser-harness-rust-auth-smoke env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- auth status` passed with `status: missing` and the override auth path.
 - `git diff --check` passed.
 - `./scripts/scan_sensitive.sh` could not run because `rg` is not installed in this cron environment; a Python fallback using the script's exact regex rules passed with no obvious secrets or local path leaks.
+
+## Daily Upstream Sync — 2026-07-02
+
+- Fetched `origin/main` and `upstream/main`; local `main` started clean and equal to `origin/main`.
+- Previous target: `7594909e7963c9ba328e39cc79e9f20ff94b2a82`; new upstream target: `4d75f115c039bf769d614fbd8d996a961e143567`.
+- New upstream range `7594909e7963c9ba328e39cc79e9f20ff94b2a82..4d75f115c039bf769d614fbd8d996a961e143567`: 6 commits (all non-merge).
+- Upstream changes analyzed:
+  - `5d34276`: Renamed "browser-harness" to "browser-use" in `SKILL.md` frontmatter/description/title, `pyproject.toml` (version 0.1.3→0.1.4), and `tests/unit/test_skill.py`.
+  - `ffa5db0`: Updated `test_skill.py` metadata description to match new name.
+  - `be7a36d`: Aligned skill identity with harness CLI in `SKILL.md`.
+  - `81daf7f`: Restored browser-use skill identity in `SKILL.md`.
+  - `057dd15`: Added v4 cloud agent promotion link to `SKILL.md`.
+  - `607f168`: Updated auth key-importation example in `SKILL.md` from bare `--api-key-stdin` to `printf '%s' "$BROWSER_USE_API_KEY" | browser-harness auth login --api-key-stdin`.
+- Net upstream effect: Full rebranding from "browser-harness" to "browser-use" in skill metadata, v4 cloud promotion, and auth key-importation doc update. No Python runtime code changes.
+- Rust migration decisions:
+  - Updated root `SKILL.md` frontmatter: `name: browser-use`, description with "Always use browser-use..." prefix, title to `# Browser Use`.
+  - Added v4 cloud promotion paragraph (`cloud.browser-use.com?utm_source=skill&...`) to the remote browsers section of root `SKILL.md`.
+  - Updated `skills/browser-harness/SKILL.md` frontmatter to match (name/description/title) while preserving Rust fork-specific CLI documentation.
+  - Bumped workspace version in `rust/Cargo.toml` from `0.1.3` to `0.1.4`.
+  - Did not copy `pyproject.toml` or `tests/unit/test_skill.py` (Python-only packaging).
+  - Did not rename the Rust CLI binary from `browser-harness`; the binary/CLI name remains `browser-harness` for compatibility.
+  - No Python runtime files were copied; no Rust code logic changed.
+
+## Daily Sync Verification Evidence — 2026-07-02
+
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check` passed.
+- `cargo check --manifest-path rust/Cargo.toml --workspace` passed.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace` passed (178 tests, 0 failures).
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary` passed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed.
+- `git diff --check` passed.
+- `./scripts/scan_sensitive.sh` could not run because `rg` is not installed in this cron environment; a Python fallback using the script's exact regex rules passed with no new secrets or local path leaks (all hits were pre-existing public Metacritic API keys and localhost CDP examples common across docs/tests).
