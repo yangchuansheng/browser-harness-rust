@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `7594909e7963c9ba328e39cc79e9f20ff94b2a82`
-- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..7594909e7963c9ba328e39cc79e9f20ff94b2a82`
-- Count: 285 commits
+- Upstream target commit: `4d75f115c039bf769d614fbd8d996a961e143567`
+- Commit range: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2..4d75f115c039bf769d614fbd8d996a961e143567`
+- Count: 302 commits
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
