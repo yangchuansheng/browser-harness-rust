@@ -48,12 +48,18 @@ bhrun switch-tab <<'JSON'
 JSON
 ```
 
+Use the activated request only when the user asks to see that tab.
+
 ## Rules
 
 - prefer `ensure-real-tab` before a browser-first workflow starts
 - use `switch-tab` to attach to a known target while preserving Chrome's visible tab
-- set `activate=true` for an explicit visible switch or verified
-  visibility-dependent rendering
+- set `activate=true` only for a user-requested visible switch; a timeout or a
+  page that pauses while hidden is not permission to foreground Chrome
+- for a focus-gated page, enable
+  `{"method":"Emulation.setFocusEmulationEnabled","params":{"enabled":true}}`
+  through `bhrun cdp-raw`, do the work, verify it, then disable the same method
+  with `"enabled":false`
 - treat `new-tab` as a background creation-and-attach primitive
 - call `close-tab` for temporary tabs once the workflow no longer needs them
 - if `page_info()` shows `w=0` or `h=0`, recover the attachment instead of

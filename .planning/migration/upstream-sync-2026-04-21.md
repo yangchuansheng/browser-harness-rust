@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `10b2086c29f0696a6712956d2914e03012f5ebd0`
-- Commit range: `0c9b95ff6740556dd71d28f9422a953d203358af..10b2086c29f0696a6712956d2914e03012f5ebd0`
-- Count: 46 commits
+- Upstream target commit: `afbcc381b963040c19627d788e40c7e7663171ee`
+- Commit range: `10b2086c29f0696a6712956d2914e03012f5ebd0..afbcc381b963040c19627d788e40c7e7663171ee`
+- Count: 18 commits
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -755,3 +755,67 @@
 - Commit-table validation: `audit_rows=46`; domain transform: `domain_mapping=111/111`.
 - `git diff --check`: passed.
 - `./scripts/scan_sensitive.sh` stopped at macOS Bash 3.2 `mapfile`. The zsh/rg fallback used the script's exact 12 PCRE2 patterns over `git ls-files -z --cached --others --exclude-standard`: `289` files, `0` matches, `0` new matches.
+
+## Re-Audit — 2026-09-17
+
+- Previous target: `10b2086c29f0696a6712956d2914e03012f5ebd0`; immutable fetched target: `afbcc381b963040c19627d788e40c7e7663171ee`.
+- Full `git rev-list --count 10b2086c29f0696a6712956d2914e03012f5ebd0..afbcc381b963040c19627d788e40c7e7663171ee` result: `18` (10 non-merge, 8 merge).
+- Upstream files in range: `SKILL.md`, `interaction-skills/connection.md`, `interaction-skills/scrolling.md`, `interaction-skills/tabs.md`, `src/browser_harness/admin.py`, `src/browser_harness/auth.py`, `src/browser_harness/run.py`, `src/browser_harness/video_render.py`, `src/mcp_server.py`, plus five Python unit-test files (+263/-27). No domain-skill changes.
+
+### Chronological Commit Audit
+
+| SHA | Subject | Area | Rust disposition |
+| --- | --- | --- | --- |
+| 7103d22 | docs: clarify raw CDP keyword parameters | SKILL | Adapted into `SKILL.md` with the Rust `params`/`session_id` shape |
+| d5dbf18 | fix: mark MCP helper failures as tool errors | MCP | Already satisfied (`isError: true`) |
+| 5c5fedf | docs: prevent automatic Chrome foregrounding | SKILL/interaction | Adapted into `SKILL.md` and three interaction skills |
+| 83e9ecd | fix: download webm export next to the requested output | video | Python-only; the Rust video engine is unported |
+| 07db27b | fix: reject unknown flags after --update | admin/CLI | Not applicable; Rust has no `--update` |
+| ba6fbbf | fix: reject non-object auth.json with AuthError | auth | Already satisfied in `bh-remote` |
+| e15ccf5 | test: remove trailing blank line | tests | Not applicable; Python test hygiene |
+| c5e5d4f | Match the uv tool-list entry, not a substring | admin | Not applicable; no uv tool path in Rust |
+| f533f9e | Only hint at pip when uv does not manage the install | admin | Not applicable; no uv tool path in Rust |
+| df3cbc5 | Tell pip and pipx users how to upgrade when uv tool upgrade fails | admin | Not applicable; no uv tool path in Rust |
+| 0c1d09a | Merge main into agency/installer-uv-fallback | merge | Carries the uv-fallback series above |
+| 49e8df8 | Merge pull request #759 (no automatic tab activation) | merge | Final activation guidance |
+| ad228d5 | Merge pull request #736 (installer uv fallback) | merge | uv upgrade flow inapplicable |
+| eba1021 | Merge pull request #753 (mcp tool errors iserror) | merge | MCP contract already present |
+| c942d74 | Merge pull request #764 (docs raw cdp keywords) | merge | Docs guidance ported |
+| 6b94f73 | Merge pull request #756 (update flag validation) | merge | `--update` absent in Rust |
+| 0a9357c | Merge pull request #755 (auth file non-object json) | merge | Guard already present |
+| afbcc38 | Merge pull request #757 (video export nested output) | merge | Recorded as Python-only |
+
+### Migrated This Round
+
+- Rust source: zero changes. Deltas 3 and 4 already exist in the Rust architecture, so no crate or binary needed editing this round.
+- Docs: `SKILL.md` now forbids automatic `"activate":true` foregrounding, documents temporary `Emulation.setFocusEmulationEnabled` for pages that pause while hidden, and spells out that raw CDP parameters live in the named `params` object with a separate `session_id` field. `interaction-skills/tabs.md`, `interaction-skills/connection.md`, and `interaction-skills/scrolling.md` carry the same policy for tab switching, connection setup, and the hidden-tab scroll fallback.
+- Planning: this section plus the refreshed `Scope` fields at the top of this file.
+
+### Adapted Instead of Copied
+
+- Behaviour deltas 3 and 4 were verified against the Rust surface instead of re-implemented: `browser-harness-mcp` already answers with MCP tool errors, and `bh-remote` already rejects a non-object auth root while naming the path.
+- Deltas 5 and 6 belong to the upstream Python install/upgrade flow (`uv tool upgrade`, pip/pipx hints, `--update` flag validation). This fork installs native binaries through `browser-harness install`, so there is no uv/pip upgrade surface to fix. A Rust `--update` command was deliberately not invented.
+- Delta 7 lives in `video_render.py`; the Rust fork has no recording/export engine port, so the download-path fix is recorded as a docs-only decision. `SKILL.md` and `interaction-skills/make-video.md` already carry the "not yet ported" note.
+- Upstream's Python call examples (`cdp("Input.insertText", text="hello")`, `activate_tab()`) were translated to this fork's CLI/guest surface (`bhrun cdp-raw` JSON payloads, `switch-tab`'s `activate` field, `bh_guest_sdk::cdp_raw`). `install.md` and `README.md` keep their setup-time activation wording, which serves an explicit user-visible first-run step.
+
+### Per-Delta Applicability
+
+| # | Upstream behavior | Decision | Reason |
+| --- | --- | --- | --- |
+| 1 | Never auto-foreground Chrome; temporary focus emulation for focus-gated work | Ported in docs | Rust `switch-tab` already defaults `activate=false` and no code path activates automatically |
+| 2 | Raw CDP parameters passed as keywords; the second positional slot is a session id | Ported in docs | Rust is typed: `method`/`params`/`session_id` are named fields, and `SKILL.md` now states the parameters object explicitly |
+| 3 | MCP helper failures use the tool-error channel | Already present | `rust/bins/browser-harness-mcp/src/main.rs` returns `isError: true` for helper failures and unknown tools |
+| 4 | Non-object `auth.json` root raises an AuthError naming the file | Already present | `load_auth_file` in `rust/crates/bh-remote/src/lib.rs` returns `auth file root must be a JSON object: <path>` |
+| 5 | `--update` rejects unknown flags, prints usage, exits 2 | Not applicable | The Rust facade has no `--update`/upgrade command to validate flags for |
+| 6 | Exact `uv tool list` entry match; pip hint only when uv does not manage the install | Not applicable | Upstream Python packaging logic; this fork installs cargo binaries and never shells out to uv |
+| 7 | `review()` mkdirs the output directory and downloads the webm next to the requested output | Not applicable runtime | The Rust recording/export engine is unported; decision recorded, nothing to change |
+
+### Verification Evidence
+
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check`: passed (exit 0).
+- `cargo check --manifest-path rust/Cargo.toml --workspace`: passed; finished the dev profile in 6.27s, all workspace members report `0.1.13`.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace`: passed; 20 test targets (13 unit + 7 doc-test), `211 passed; 0 failed`.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary`: passed (exit 0); `execution_model=PersistentRunner`, `operations=42`, `cdp_raw=experimental`, `persistent_guest_runner=preview`.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help 2>&1`: passed (exit 0) and lists the admin commands (`ensure-daemon`, `mac-approve`, `restart-daemon`, `stop-daemon`) and the typed runner commands including `cdp-raw`.
+- Secret/local-path scan: `./scripts/scan_sensitive.sh` fails under macOS Bash 3.2 with `scripts/scan_sensitive.sh: line 12: mapfile: command not found` (exit 127), because `mapfile` requires Bash 4. The maintained Python fallback at the `autonomous-coding-agents` skill's `scripts/scan_sensitive_fallback.py` was used instead: `No obvious secrets or local path leaks found in 289 tracked/unignored files` (exit 0).
+- `git diff --check`: passed (exit 0).

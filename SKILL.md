@@ -60,10 +60,16 @@ returns `ready`; otherwise follow its printed instruction.
 - For repo-local Rust-native use, invoke via `cargo run --quiet --bin browser-harness -- ...`.
 - First navigation is `new_tab(url)`. The daemon preserves the attached tab across CLI invocations; inspect `current-tab` and `list-tabs` before opening another tab.
 - `new-tab` and `switch-tab` attach in the background and move the horse marker.
-- Keep one working tab per task/site and reuse matching tabs. Activate a background tab only after a scroll timeout or when visible rendering requires it.
-  Screenshots and normal CDP input work on that attached tab. Set
-  `"activate":true` on `switch-tab` when the user requests a visible switch or
-  a page demonstrably pauses visibility-dependent rendering.
+- Keep one working tab per task/site and reuse matching tabs. Never set
+  `"activate":true` automatically: it brings Chrome to the foreground. Set it
+  only when the user asks to see or visibly switch to that tab, and do not pair
+  `switch-tab` with an activated `switch-tab` for the same move.
+- Screenshots and normal CDP input work on the attached background tab. For a
+  page that pauses while hidden, temporarily enable
+  `{"method":"Emulation.setFocusEmulationEnabled","params":{"enabled":true}}`
+  through `bhrun cdp-raw`, perform and verify the operation, then disable it with
+  the same method and `"enabled":false`. If background control still fails,
+  report that limitation instead of activating the tab.
 
 The code is the doc.
 
@@ -272,7 +278,7 @@ The *durable* shape of the site — the map, not the diary. Focus on what the ne
 - **Verification**: `print(page_info())` is the simplest "is this alive?" check; AX box-model checks are the preferred way to verify whether a visible action actually worked.
 - **Iframe sites** (Azure blades, Salesforce): `click(x, y)` passes through; only drop to iframe DOM work when coordinate clicks are the wrong tool.
 - **Auth wall**: redirected to login → stop and ask the user. Don't type credentials from screenshots.
-- **Raw CDP** for typed gaps: `browser-harness cdp-raw <<'JSON' ... JSON` or `bh_guest_sdk::cdp_raw(...)`.
+- **Raw CDP** for typed gaps: `browser-harness cdp-raw <<'JSON' ... JSON` or `bh_guest_sdk::cdp_raw(...)`. CDP parameters belong in the named `params` object, and `session_id` is a separate named field: `{"method":"Input.insertText","params":{"text":"hello"},"session_id":"<id>"}`.
 
 ## Design constraints
 
@@ -309,7 +315,7 @@ Chrome / Browser Use cloud -> CDP WS -> bhd -> /tmp/bu-<NAME>.sock -> bhrun / bh
 - **Chrome may open the profile picker before any real tab exists.** If Chrome opens both a profile picker and the remote-debugging page, tell the user to choose their normal profile first, then tick the checkbox. On macOS, run `browser-harness mac-approve` when the per-connection sheet appears.
 - **On macOS, if Chrome is already running, prefer AppleScript `open location` over `open -a ... URL`.** It reuses the current profile and avoids creating an extra startup path through the profile picker.
 - **Omnibox popups are fake `page` targets.** Filter `chrome://omnibox-popup...` and other internals when you need a real tab.
-- **CDP target order != Chrome's visible tab-strip order.** Use UI automation when the user means "the first/second tab I can see"; `Target.activateTarget` only shows a known target.
+- **CDP target order != Chrome's visible tab-strip order.** Use UI automation when the user means "the first/second tab I can see"; `Target.activateTarget` only shows a known target, so reserve it for a user-requested visible switch.
 - **Named local/CDP daemons own reusable background tabs.** Each daemon keeps a
   dedicated target and prefers its current target during stale-session recovery.
 - **Stale-session recovery follows exact replacement chains.** Concurrent

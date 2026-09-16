@@ -11,9 +11,15 @@ The Rust-native path is:
 ## Hidden Tabs
 
 Start with the normal `scroll` command. A background tab can leave a wheel
-command unanswered. After a proven timeout, use `switch-tab` with
-`"activate":true`, retry the same scroll once, and verify the scroll position.
-Activation is visible to the user, so keep it as the timeout fallback.
+command unanswered. A proven timeout is not permission to foreground Chrome:
+
+1. enable focus emulation with `bhrun cdp-raw`
+   (`{"method":"Emulation.setFocusEmulationEnabled","params":{"enabled":true}}`)
+2. retry the same `scroll` once and re-read the page or container scroll position
+3. disable focus emulation with the same method and `"enabled":false`
+
+Use `switch-tab` with `"activate":true` only when the user asks to see the tab.
+If background scrolling still fails, stop and name that exact limitation.
 
 ## Split The Cases
 

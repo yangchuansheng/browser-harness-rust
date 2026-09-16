@@ -40,15 +40,17 @@ JSON
 - `close-tab`: close a specific target, or the current target when `target_id`
   is omitted
 - `switch-tab`: attach to a known target and move the horse marker; `activate`
-  defaults to `false` and opts into a visible Chrome tab switch
+  defaults to `false`, and `true` is reserved for a user-requested visible
+  Chrome tab switch
 
 ## Rules
 
 - use `list-tabs(include_internal=false)` for user-facing work
 - use `switch-tab` when you already know the target id
 - keep `activate=false` for screenshots and normal CDP input in the background
-- set `activate=true` for a user-requested visible switch or a page that pauses
-  visibility-dependent rendering
+- set `activate=true` only for a user-requested visible switch; rendering or
+  input trouble is not permission to foreground Chrome, so enable
+  `Emulation.setFocusEmulationEnabled` through `bhrun cdp-raw` first
 - use `close-tab` after temporary automation tabs are no longer needed
 - use `ensure-real-tab` if you suspect the daemon is attached to an internal tab
 - re-check `current-tab` or `page_info()` after switching if the flow is
