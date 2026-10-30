@@ -20,5 +20,7 @@ uv.lock
 coverage/
 dist/
 target/
+!domains/target/
+!domains/target/**
 rust/target/
 .claude/
