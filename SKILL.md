@@ -151,6 +151,8 @@ the user if they need to watch the session. When the daemon is stopped with the
 matching `BU_BROWSER_ID`, it PATCHes the cloud browser to `stop`, which ends
 billing and persists profile state.
 
+Cloud browsers ignore viewport and device emulation (`Emulation.setDeviceMetricsOverride`, touch, window bounds) unless provisioned with `"allowResizing": true` in the `create-browser` JSON payload (equivalent to upstream `start_remote_daemon(name, allowResizing=True)`).
+
 Profiles (cookies-only login state) live in `interaction-skills/profile-sync.md`
 and map to:
 

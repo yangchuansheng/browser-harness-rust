@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `4ced8e0087d2d45ea2d08c00cb62449b2d94a90e`
-- Commit range: `afbcc381b963040c19627d788e40c7e7663171ee..4ced8e0087d2d45ea2d08c00cb62449b2d94a90e`
-- Count: 154 commits
+- Upstream target commit: `6e69c7fbe97edded9934e3fb305d9af3536f941f`
+- Commit range: `4ced8e0087d2d45ea2d08c00cb62449b2d94a90e..6e69c7fbe97edded9934e3fb305d9af3536f941f`
+- Count: 10 commits (6 non-merge, 4 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -866,3 +866,52 @@
 - `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0).
 - `git diff --cached --check`: passed (exit 0).
 - Sensitive/local-path scan via `scan_sensitive_fallback.py`: passed (`No obvious secrets or local path leaks found in 357 tracked/unignored files`, exit 0).
+
+## Daily Upstream Sync — 2026-11-04
+
+- Run date: `2026-11-04`
+- Previous target: `4ced8e0087d2d45ea2d08c00cb62449b2d94a90e`; new upstream target: `6e69c7fbe97edded9934e3fb305d9af3536f941f`.
+- Commit range analysed: `4ced8e0087d2d45ea2d08c00cb62449b2d94a90e..6e69c7fbe97edded9934e3fb305d9af3536f941f` (`10` commits total: `6` non-merge, `4` merge; `20` files in net diff).
+- Upstream files in range: `SKILL.md` (`+2`), `CLAUDE.md` (deleted), and `18` new domain-skill files under `agent-workspace/domain-skills/<site>/scraping.md`. Zero Python runtime (`src/browser_harness/*.py`) files changed in this range.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `8126cb7` | Domain skills: 6 field-tested sites (ESPN, Yahoo Finance, Bluesky, Vinted, TCGplayer, Finviz) | domains | Migrated to `domains/<site>/skill.md` |
+| `e6f170f` | Domain skills (Finviz): say "redirects" where the HTTP status was not checked; fix "blocks below" | domains | Folded into `domains/finviz/skill.md` |
+| `0727ae7` | Merge pull request #959 from browser-use/skills/batch-1031 | merge | Carries `8126cb7` and `e6f170f` |
+| `9abe45d` | Document allowResizing for cloud browser emulation | SKILL | Ported to `SKILL.md` with Rust `create-browser` JSON payload equivalent |
+| `5d99b3c` | Merge pull request #960 from browser-use/docs/allow-resizing | merge | Carries `9abe45d` |
+| `d295889` | Domain skills: 6 field-tested sites (Discogs, Google Trends, Wikipedia, Ticketmaster, Zoopla, Chess.com) | domains | Migrated to `domains/<site>/skill.md` |
+| `a83c0be` | Merge pull request #961 from browser-use/skills/batch-1101 | merge | Carries `d295889` |
+| `91a4b62` | Remove CLAUDE.md | repo config | No-op in Rust fork (`CLAUDE.md` does not exist locally) |
+| `83a4338` | Domain skills: 6 field-tested sites (ClinicalTrials.gov, Kalshi, DEX Screener, Sofascore, Mercari, Google Patents) | domains | Migrated to `domains/<site>/skill.md` |
+| `6e69c7f` | Merge pull request #966 from browser-use/skills/batch-1102 | merge | Carries `91a4b62` and `83a4338` |
+
+### Sites Added and Docs Updated
+
+- **18 new `scraping.md` guides mapped to `domains/<site>/skill.md`**:
+  `bluesky`, `chess-com`, `clinicaltrials-gov`, `dexscreener`, `discogs`, `espn`, `finviz`, `google-patents`, `google-trends`, `kalshi`, `mercari`, `sofascore`, `tcgplayer`, `ticketmaster`, `vinted`, `wikipedia`, `yahoo-finance`, `zoopla`.
+- **`SKILL.md` cloud-browser viewport emulation guidance**:
+  Documented that cloud browsers ignore viewport and device emulation (`Emulation.setDeviceMetricsOverride`, touch, window bounds) unless provisioned with `"allowResizing": true` in the `browser-harness create-browser` JSON payload (which `bhctl` forwards directly through `BrowserUseClient::create_browser` to `POST /browsers`, matching upstream `start_remote_daemon(name, allowResizing=True)`).
+- Total domain-skill coverage after sync: `197` upstream `agent-workspace/domain-skills/` files (`193` site `.md` guides, `README.md`, and `3` companion files) mapped to `197` local files under `domains/` (`0` missing), plus `14` earlier Rust-fork site `skill.md` files (`207` total site `.md` files in `domains/` excluding `domains/README.md`).
+
+### Mapping Decisions & Applicability Table
+
+| Upstream item | Commits | Decision | Reason |
+| --- | --- | --- | --- |
+| `agent-workspace/domain-skills/<site>/scraping.md` (18 sites) | `8126cb7`, `e6f170f`, `d295889`, `83a4338` | Mapped to `domains/<site>/skill.md` | Follows `domains/README.md` convention with `text` code fences for non-executable snippets |
+| `SKILL.md` `start_remote_daemon(name, allowResizing=True)` note | `9abe45d` | Adapted to Rust `create-browser` JSON payload | `bhctl create-browser` passes arbitrary JSON object fields (`"allowResizing": true`) to `BrowserUseClient::create_browser` (`POST /browsers`) |
+| `CLAUDE.md` deletion | `91a4b62` | No-op | This Rust fork never tracked `CLAUDE.md` |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | `4ced8e0..6e69c7f` | Unchanged | Zero upstream runtime changes in range; `"allowResizing": true` pass-through is already supported by `bhctl` and `bh-remote` |
+
+### Verification Evidence
+
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo check --manifest-path rust/Cargo.toml --workspace`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace`: passed (`211 passed; 0 failed` across unit and doc-test targets).
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary`: passed (`execution_model=PersistentRunner`, `operations=42`).
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0).
+- `git diff --cached --check`: passed (exit 0).
+- Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`mapfile: command not found`, exit 127); the maintained Python fallback at the `autonomous-coding-agents` skill's `scripts/scan_sensitive_fallback.py` passed (`No obvious secrets or local path leaks found in 375 tracked/unignored files`, exit 0).
