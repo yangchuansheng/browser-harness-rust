@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `6e69c7fbe97edded9934e3fb305d9af3536f941f`
-- Commit range: `4ced8e0087d2d45ea2d08c00cb62449b2d94a90e..6e69c7fbe97edded9934e3fb305d9af3536f941f`
-- Count: 10 commits (6 non-merge, 4 merge)
+- Upstream target commit: `be26283ee9c3dd089aefa70ffb04cf71dc6f59e1`
+- Commit range: `6e69c7fbe97edded9934e3fb305d9af3536f941f..be26283ee9c3dd089aefa70ffb04cf71dc6f59e1`
+- Count: 7 commits (4 non-merge, 3 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -915,3 +915,51 @@
 - `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0).
 - `git diff --cached --check`: passed (exit 0).
 - Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`mapfile: command not found`, exit 127); the maintained Python fallback at the `autonomous-coding-agents` skill's `scripts/scan_sensitive_fallback.py` passed (`No obvious secrets or local path leaks found in 375 tracked/unignored files`, exit 0).
+
+## Daily Upstream Sync — 2026-11-06
+
+- Run date: `2026-11-06`
+- Previous target: `6e69c7fbe97edded9934e3fb305d9af3536f941f`; new upstream target: `be26283ee9c3dd089aefa70ffb04cf71dc6f59e1`.
+- Commit range analysed: `6e69c7fbe97edded9934e3fb305d9af3536f941f..be26283ee9c3dd089aefa70ffb04cf71dc6f59e1` (`7` commits total: `4` non-merge, `3` merge; `10` files in net diff, `+4585` lines).
+- Upstream files in range: `10` new domain-skill files under `agent-workspace/domain-skills/<site>/scraping.md`. Zero Python runtime (`src/browser_harness/*.py`) or top-level doc files changed in this range.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `fc253c1` | Domain skills: 5 field-tested sites (DefiLlama, Docker Hub, FotMob, Hugging Face, NHTSA vPIC) | domains | Migrated to `domains/<site>/skill.md` |
+| `ade406a` | nhtsa: empty Series shown as "" instead of an unclosed code span | domains | Folded into `domains/nhtsa/skill.md` |
+| `b5202ae` | Merge pull request #970 from browser-use/skills/batch-1103 | merge | Carries `fc253c1` and `ade406a` |
+| `8c477cc` | Domain skills: 6 field-tested sites (Wikidata, NBA, Flightradar24, Scryfall, Sleeper, NHL) | domains | Migrated the 5 durable sites (`flightradar24`, `nhl`, `scryfall`, `sleeper`, `wikidata`) to `domains/<site>/skill.md` |
+| `9b045b0` | Merge pull request #971 from browser-use/skills/batch-1104 | merge | Carries `8c477cc` |
+| `dcd26fa` | Remove nba domain skill: robots.txt disallows named AI agents on /stats | domains | Skipped `nba`; net upstream diff excludes `nba` |
+| `be26283` | Merge pull request #972 from browser-use/skills/drop-nba | merge | Carries `dcd26fa` |
+
+### Sites Added and Skipped
+
+- **10 new `scraping.md` guides mapped to `domains/<site>/skill.md`**:
+  `defillama`, `docker-hub`, `flightradar24`, `fotmob`, `huggingface`, `nhl`, `nhtsa`, `scryfall`, `sleeper`, `wikidata`.
+- **Skipped transient upstream site (`nba`)**:
+  `agent-workspace/domain-skills/nba/scraping.md` was added in `8c477cc` and deleted in `dcd26fa` within the same sync range; `domains/nba/` remains absent locally.
+- Total domain-skill coverage after sync: `207` upstream `agent-workspace/domain-skills/` files (`203` site `.md` guides, `README.md`, and `3` companion files) mapped to `207` local files under `domains/` (`0` missing), plus `14` earlier Rust-fork site `skill.md` files (`217` total site `.md` files in `domains/` excluding `domains/README.md`).
+
+### Mapping Decisions & Applicability Table
+
+| Upstream item | Commits | Decision | Reason |
+| --- | --- | --- | --- |
+| `agent-workspace/domain-skills/<site>/scraping.md` (10 sites) | `fc253c1`, `ade406a`, `8c477cc` | Mapped to `domains/<site>/skill.md` | Follows `domains/README.md` convention; code fences use `text` and trailing whitespace is stripped for clean git diffs |
+| Helper pseudocode in migrated domain skills (`new_tab`, `goto_url`, `wait_for_load`, `js`, `cdp`, `switch_tab`, `close_tab`, `page_info`) | `fc253c1`, `8c477cc` | Retained as `text` harness pseudocode | Per `domains/README.md`, helper calls in site guides document the corresponding `browser-harness` / `bhrun` operations (`new-tab`, `goto`, `wait-for-load`, `js`, `cdp-raw`, `switch-tab`, `close-tab`, `page-info`) while preserving all field-tested URLs, selectors, API payloads, and rate-limit rules |
+| `agent-workspace/domain-skills/nba/scraping.md` add + removal | `8c477cc`, `dcd26fa` | Skipped (net zero) | Removed upstream before `be26283` because `robots.txt` disallows named AI agents on `/stats` |
+| `domains/README.md` | `6e69c7f..be26283` | Unchanged | Uses dynamic `rg --files domains` / `find domains` discovery rather than a static site list |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | `6e69c7f..be26283` | Unchanged | Upstream range contains domain-skill documentation changes only |
+
+### Verification Evidence
+
+- `cargo fmt --all --manifest-path rust/Cargo.toml -- --check`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo check --workspace --manifest-path rust/Cargo.toml`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo test --workspace --manifest-path rust/Cargo.toml`: passed (`211 passed; 0 failed` across unit and doc-test targets).
+- `env -u CFLAGS -u CC cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo run -q --manifest-path rust/Cargo.toml --bin bhrun -- summary`: passed (`execution_model=PersistentRunner`, `operations=42`).
+- `env -u CFLAGS -u CC cargo run -q --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0).
+- `git diff --check`: passed (exit 0).
+- Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`mapfile: command not found`, exit 127); the maintained Python fallback at the `autonomous-coding-agents` skill's `scripts/scan_sensitive_fallback.py` passed (`No obvious secrets or local path leaks found in 385 tracked/unignored files`, exit 0).
