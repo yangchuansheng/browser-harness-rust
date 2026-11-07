@@ -32,7 +32,7 @@ would otherwise have to rediscover.
 - Let observed browser behavior drive each contribution.
 - Add the focused site knowledge under [`domains/<site>/`](domains/).
 - Keep contributions small and focused.
-- Browse existing examples such as `domains/github/`, `domains/linkedin/`, and
-  `domains/amazon/` for the expected shape.
+- Browse existing examples such as `domains/github/`, `domains/reddit/`, and
+  `domains/nasa/` for the expected shape.
 
 Open an issue when the right contribution boundary needs discussion.

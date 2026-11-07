@@ -2552,10 +2552,6 @@ fn smoke_letterboxd_popular_guest() -> Result<Value, String> {
         Value::String(guest_path.display().to_string()),
     );
     result.insert(
-        "skill".into(),
-        Value::String("domains/letterboxd/skill.md".to_string()),
-    );
-    result.insert(
         "target_url_prefix".into(),
         Value::String(LETTERBOXD_TARGET_URL_PREFIX.to_string()),
     );
@@ -2784,10 +2780,6 @@ fn smoke_spotify_search_guest() -> Result<Value, String> {
         Value::String(guest_path.display().to_string()),
     );
     result.insert(
-        "skill".into(),
-        Value::String("domains/spotify/skill.md".to_string()),
-    );
-    result.insert(
         "target_url_prefix".into(),
         Value::String(SPOTIFY_TARGET_URL_PREFIX.to_string()),
     );
@@ -2999,10 +2991,6 @@ fn smoke_etsy_search_guest() -> Result<Value, String> {
     result.insert(
         "guest_path".into(),
         Value::String(guest_path.display().to_string()),
-    );
-    result.insert(
-        "skill".into(),
-        Value::String("domains/etsy/skill.md".to_string()),
     );
     result.insert(
         "target_url_prefix".into(),
@@ -3387,10 +3375,6 @@ fn smoke_metacritic_game_scores_guest() -> Result<Value, String> {
         "guest_path".into(),
         Value::String(guest_path.display().to_string()),
     );
-    result.insert(
-        "skill".into(),
-        Value::String("domains/metacritic/skill.md".to_string()),
-    );
     result.insert("mode".into(), Value::String("http_only".to_string()));
     maybe_build_default_guest(
         &guest_path,
@@ -3517,10 +3501,6 @@ fn smoke_walmart_search_guest() -> Result<Value, String> {
     result.insert(
         "guest_path".into(),
         Value::String(guest_path.display().to_string()),
-    );
-    result.insert(
-        "skill".into(),
-        Value::String("domains/walmart/skill.md".to_string()),
     );
     result.insert("mode".into(), Value::String("http_only".to_string()));
     result.insert(
@@ -3664,10 +3644,6 @@ fn smoke_tradingview_symbol_search_guest() -> Result<Value, String> {
     result.insert(
         "guest_path".into(),
         Value::String(guest_path.display().to_string()),
-    );
-    result.insert(
-        "skill".into(),
-        Value::String("domains/tradingview/skill.md".to_string()),
     );
     result.insert("mode".into(), Value::String("http_only".to_string()));
     result.insert(

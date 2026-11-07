@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `be26283ee9c3dd089aefa70ffb04cf71dc6f59e1`
-- Commit range: `6e69c7fbe97edded9934e3fb305d9af3536f941f..be26283ee9c3dd089aefa70ffb04cf71dc6f59e1`
-- Count: 7 commits (4 non-merge, 3 merge)
+- Upstream target commit: `b41bfb643e6c0f5a879b389615dcd1ee8c6bc165`
+- Commit range: `be26283ee9c3dd089aefa70ffb04cf71dc6f59e1..b41bfb643e6c0f5a879b389615dcd1ee8c6bc165`
+- Count: 5 commits (3 non-merge, 2 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -963,3 +963,54 @@
 - `env -u CFLAGS -u CC cargo run -q --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0).
 - `git diff --check`: passed (exit 0).
 - Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`mapfile: command not found`, exit 127); the maintained Python fallback at the `autonomous-coding-agents` skill's `scripts/scan_sensitive_fallback.py` passed (`No obvious secrets or local path leaks found in 385 tracked/unignored files`, exit 0).
+
+## Daily 2026-11-08 Sync (be26283..b41bfb6)
+
+- Run date: `2026-11-08`
+- Previous target: `be26283ee9c3dd089aefa70ffb04cf71dc6f59e1`; new upstream target: `b41bfb643e6c0f5a879b389615dcd1ee8c6bc165`.
+- Commit range analysed: `be26283ee9c3dd089aefa70ffb04cf71dc6f59e1..b41bfb643e6c0f5a879b389615dcd1ee8c6bc165` (`5` commits total: `3` non-merge, `2` merge; `67` files in net upstream diff).
+- Upstream files in range: `4` new domain-skill files (`nvd`, `pokeapi`, `treasury-fiscal-data`, `tvmaze`), `3` edited domain-skill files (`github/scraping.md`, `nasa/scraping.md`, `x/article-source-recovery.md`), and `60` deleted files across `55` domain-skill directories removed for AI-agent access-policy compliance. Zero Python runtime (`src/browser_harness/*.py`) files changed in this range.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `b69145e` | Domain skills: 4 field-tested sites (PokeAPI, NVD, TVmaze, Treasury Fiscal Data) | domains | Migrated to `domains/<site>/skill.md` |
+| `46e662d` | Merge pull request #975 from browser-use/skills/batch-1105 | merge | Carries `b69145e` |
+| `ffd8155` | Remove 55 domain skills that break the AI-agent access policy; fix x, github, nasa | domains | Removed all 55 site directories locally, applied `github`/`nasa`/`x` edits, and dropped dangling doc references |
+| `c2b7ca9` | nasa: drop the blank line left by the Exoplanet section | domains | Folded into `domains/nasa/skill.md` |
+| `b41bfb6` | Merge pull request #976 from browser-use/skills/k2-ai-policy-drops | merge | Carries `ffd8155` and `c2b7ca9` |
+
+### Sites Added, Edited, and Removed
+
+- **4 new `scraping.md` guides mapped to `domains/<site>/skill.md`**:
+  `nvd`, `pokeapi`, `treasury-fiscal-data`, `tvmaze`.
+- **3 existing domain guides updated with upstream AI-agent access-policy deltas**:
+  - `domains/github/skill.md`: dropped `?since=weekly` and `?since=monthly` trending examples and documented that `github.com/robots.txt` has `Disallow: /*?since=*` for `ClaudeBot`, `anthropic-ai`, and `User-agent: *`.
+  - `domains/nasa/skill.md`: removed the NASA Exoplanet Archive (`exoplanetarchive.ipac.caltech.edu`) section and noted that its `robots.txt` disallows every path for `ClaudeBot`, `anthropic-ai`, and `Claude-Web`, leaving `epic.gsfc.nasa.gov` as the rate-limit-free companion domain.
+  - `domains/x/article-source-recovery.md`: replaced the LinkedIn cross-post fallback with author blog/public profile guidance and noted that `www.linkedin.com/robots.txt` disallows every path for `Claude-User`, `ChatGPT-User`, `Perplexity-User`, and other named AI agents.
+- **55 site directories (`66` local files: `60` direct upstream mappings plus `6` legacy `skill.md` duplicates/stubs in `amazon`, `facebook`, `job-boards`, `linkedin`, `news-aggregation`, `tiktok`) removed for AI-agent access-policy parity**:
+  `aa`, `agoda`, `airbnb`, `aliexpress`, `amazon`, `apartments-com`, `apple-app-store`, `best-buy`, `chess-com`, `claude`, `claude-ai`, `coursera`, `dice`, `discogs`, `doordash`, `ebay`, `espn`, `etsy`, `facebook`, `figma`, `fred`, `furnishedfinder`, `g2`, `genius`, `glassdoor`, `gutenberg`, `howlongtobeat`, `job-boards`, `kalshi`, `letterboxd`, `linkedin`, `ly-com`, `macrotrends`, `medium`, `metacritic`, `news-aggregation`, `nhl`, `nordic`, `quora`, `realtor-com`, `rotten-tomatoes`, `sephora`, `soundcloud`, `spotify`, `stackoverflow`, `target`, `tiktok`, `tradingview`, `tripadvisor`, `trustpilot`, `vinted`, `walmart`, `yahoo-finance`, `zillow`, `zoopla`.
+- **Dangling reference cleanup**:
+  - Updated `CONTRIBUTING.md` example list from `domains/linkedin/` and `domains/amazon/` to `domains/reddit/` and `domains/nasa/`.
+  - Updated `SKILL.md` domain search example from `rg -n "tiktok|upload" domains` to `rg -n "github|trending" domains`.
+  - Dropped the 6 dangling `"skill": "domains/<site>/skill.md"` metadata fields in `rust/bins/bhsmoke/src/main.rs` (`letterboxd`, `spotify`, `etsy`, `metacritic`, `walmart`, `tradingview`) while keeping all WASM guest crates (`rust/guests/*`) and `bhsmoke` scenarios intact.
+
+### Mapping Decisions & Applicability Table
+
+| Upstream item | Commits | Decision | Reason |
+| --- | --- | --- | --- |
+| `agent-workspace/domain-skills/<site>/scraping.md` (4 new sites) | `b69145e`, `46e662d` | Mapped to `domains/<site>/skill.md` | Follows `domains/README.md` convention with `text` code fences for harness pseudocode and stripped trailing whitespace |
+| `github/scraping.md`, `nasa/scraping.md`, `x/article-source-recovery.md` | `ffd8155`, `c2b7ca9`, `b41bfb6` | Applied upstream deltas in place | Preserves existing file structure while enforcing upstream `robots.txt` / AI-agent access-policy updates |
+| 55 deleted `agent-workspace/domain-skills/<site>/` directories | `ffd8155`, `b41bfb6` | Removed locally (`66` files across `55` dirs) | Maintains AI-agent access-policy parity with upstream while keeping the 8 unrelated local-only `domains/<site>/skill.md` packages intact |
+| Rust guest crates (`rust/guests/*`) and `bhsmoke` scenarios (`rust/bins/bhsmoke/src/main.rs`) | `be26283..b41bfb6` | Left intact; dropped dangling `"skill"` doc pointers | Preserves workspace build/test/smoke coverage while removing references to deleted `domains/<site>/skill.md` files |
+
+### Verification Evidence
+
+- `cargo fmt --all --manifest-path rust/Cargo.toml -- --check`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo check --workspace --manifest-path rust/Cargo.toml`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo test --workspace --manifest-path rust/Cargo.toml`: passed (`203` unit tests passed, `0` failed across `bh-cdp`, `bh-daemon`, `bh-discovery`, `bh-guest-sdk`, `bh-protocol`, `bh-remote`, `bh-wasm-host`, `bhctl`, `bhd`, `bhrun`, `bhsmoke`, `browser-harness`, and `browser-harness-mcp`, plus `7` doc-test targets).
+- `env -u CFLAGS -u CC cargo run -q --manifest-path rust/Cargo.toml --bin bhrun -- summary`: passed (`bhrun scaffold: execution_model=PersistentRunner guest_transport=HostCallsOnly protocol_families=5 operations=42 ...`).
+- `env -u CFLAGS -u CC cargo run -q --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0).
+- `git diff --cached --check`: passed (exit 0).
+- Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`mapfile: command not found`, exit 127); `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py` passed (`No obvious secrets or local path leaks found in 323 tracked/unignored files`, exit 0).

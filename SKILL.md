@@ -232,7 +232,7 @@ Useful commands:
 
 ```bash
 rg --files domains
-rg -n "tiktok|upload" domains
+rg -n "github|trending" domains
 ```
 
 ## Always contribute back
