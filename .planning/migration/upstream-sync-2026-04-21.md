@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `b41bfb643e6c0f5a879b389615dcd1ee8c6bc165`
-- Commit range: `be26283ee9c3dd089aefa70ffb04cf71dc6f59e1..b41bfb643e6c0f5a879b389615dcd1ee8c6bc165`
-- Count: 5 commits (3 non-merge, 2 merge)
+- Upstream target commit: `a7c4cb02a3f0cd83e09598d14a2ca65743791998`
+- Commit range: `b41bfb643e6c0f5a879b389615dcd1ee8c6bc165..a7c4cb02a3f0cd83e09598d14a2ca65743791998`
+- Count: 6 commits (4 non-merge, 2 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -1014,3 +1014,47 @@
 - `env -u CFLAGS -u CC cargo run -q --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0).
 - `git diff --cached --check`: passed (exit 0).
 - Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`mapfile: command not found`, exit 127); `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py` passed (`No obvious secrets or local path leaks found in 323 tracked/unignored files`, exit 0).
+
+## Daily 2026-11-10 Sync (b41bfb6..a7c4cb0)
+
+- Run date: `2026-11-10`
+- Previous target: `b41bfb643e6c0f5a879b389615dcd1ee8c6bc165`; new upstream target: `a7c4cb02a3f0cd83e09598d14a2ca65743791998`.
+- Commit range analysed: `b41bfb643e6c0f5a879b389615dcd1ee8c6bc165..a7c4cb02a3f0cd83e09598d14a2ca65743791998` (`6` commits total: `4` non-merge, `2` merge; `5` files in net upstream diff).
+- Upstream files in range: `3` added domain-skill files (`federal-register/scraping.md`, `lichess/scraping.md`, `usgs-earthquake/scraping.md`) and `2` deleted domain-skill files (`rawg/scraping.md`, `ulta/scraping.md`) under `agent-workspace/domain-skills/`. Zero Python runtime (`src/browser_harness/*.py`) or Rust runtime files changed in this range.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `d15e727` | Remove ulta and rawg domain skills (site terms bar the data collection) | domains | Deleted `domains/rawg/skill.md` and `domains/ulta/skill.md` (and their directories) |
+| `82d7f5d` | Merge pull request #979 from browser-use/skills/remove-ulta-rawg-1107 | merge | Carries `d15e727` |
+| `b5c829b` | Domain skills: 3 field-tested sites (Lichess daily puzzle, USGS earthquakes, Federal Register) | domains | Migrated to `domains/federal-register/skill.md`, `domains/lichess/skill.md`, and `domains/usgs-earthquake/skill.md` |
+| `062582b` | federal-register: always open a new tab; html_url is for people | domains | Folded into `domains/federal-register/skill.md` |
+| `cc4767a` | Domain skills: review fixes (async fetch, earthquake filter, explicit checks) | domains | Folded into `domains/federal-register/skill.md`, `domains/lichess/skill.md`, and `domains/usgs-earthquake/skill.md` |
+| `a7c4cb0` | Merge pull request #984 from browser-use/skills/batch-2026-11-08 | merge | Carries `b5c829b`, `062582b`, and `cc4767a` |
+
+### Sites Added and Removed
+
+- **3 new `scraping.md` guides mapped to `domains/<site>/skill.md`**:
+  `federal-register`, `lichess`, `usgs-earthquake`.
+- **2 site directories (`domains/rawg/skill.md` and `domains/ulta/skill.md`) removed**:
+  Deleted symmetrically because upstream removed `rawg` and `ulta` after verifying that site terms bar the data collection.
+
+### Mapping Decisions & Applicability Table
+
+| Upstream item | Commits | Decision | Reason |
+| --- | --- | --- | --- |
+| `agent-workspace/domain-skills/<site>/scraping.md` (`federal-register`, `lichess`, `usgs-earthquake`) | `b5c829b`, `062582b`, `cc4767a`, `a7c4cb0` | Mapped to `domains/<site>/skill.md` | Follows `domains/README.md` convention with `text` code fences for harness pseudocode and stripped trailing whitespace |
+| `agent-workspace/domain-skills/rawg/scraping.md` and `agent-workspace/domain-skills/ulta/scraping.md` | `d15e727`, `82d7f5d` | Deleted `domains/rawg/skill.md` and `domains/ulta/skill.md` | Upstream removed both skills because site terms bar the data collection |
+| `domains/README.md` | `b41bfb6..a7c4cb0` | Unchanged | Uses dynamic `rg --files domains` / `find domains` discovery rather than a static site list |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | `b41bfb6..a7c4cb0` | Unchanged | Upstream range contains domain-skill documentation changes only |
+
+### Verification Evidence
+
+- `cargo fmt --all --manifest-path rust/Cargo.toml -- --check`: passed (exit 0).
+- `cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0) with `MACOSX_DEPLOYMENT_TARGET=11.0`. A plain run without that variable fails at link time for third-party native C crates (`ring`, `libzstd_sys`) because Apple clang 17 (`/usr/bin/cc`) defaults to the macOS 26.2 SDK deployment target while rustc 1.95 links `aarch64-apple-darwin` with `-mmacosx-version-min=11.0.0`; the mismatch reports `ld: symbol(s) not found for architecture arm64`. Setting `MACOSX_DEPLOYMENT_TARGET=11.0` aligns clang and rustc and the build completes. This is an environment/toolchain mismatch, unrelated to the domain-skill-only changes in this range.
+- `MACOSX_DEPLOYMENT_TARGET=11.0 cargo test --workspace --manifest-path rust/Cargo.toml`: passed — `211 passed (20 suites, 0.56s)`, exit 0.
+- `MACOSX_DEPLOYMENT_TARGET=11.0 cargo run -q --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0); lists the complete admin and runner command surfaces (`auth`, `doctor`, `cdp-raw`, `goto`, `js`, `click`, `screenshot`, `fill-input`, `wait-for-element`, `wait-for-network-idle`, …). No real browser required since the CLI assembles and prints usage without a CDP connection.
+- `git diff --check`: the only whitespace notice is on the pre-existing, intentionally-untouched `AGENTS.md` working-tree edit (`AGENTS.md:344: new blank line at EOF`); all migration paths are clean. After staging, `git diff --cached --check` passed (exit 0) and `AGENTS.md` is absent from the index.
+- Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`mapfile: command not found`, exit 127); `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py` passed (`No obvious secrets or local path leaks found in 326 tracked/unignored files`, exit 0).
+- `git diff --cached --name-only` immediately before commit showed only the migration files (3 adds, 2 deletes, 1 audit doc); `AGENTS.md` was not staged.
