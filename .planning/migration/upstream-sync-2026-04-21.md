@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `a7c4cb02a3f0cd83e09598d14a2ca65743791998`
-- Commit range: `b41bfb643e6c0f5a879b389615dcd1ee8c6bc165..a7c4cb02a3f0cd83e09598d14a2ca65743791998`
-- Count: 6 commits (4 non-merge, 2 merge)
+- Upstream target commit: `389d9c08fe83641b5af924a777d390e9b61aace3`
+- Commit range: `a7c4cb02a3f0cd83e09598d14a2ca65743791998..389d9c08fe83641b5af924a777d390e9b61aace3`
+- Count: 17 commits (11 non-merge, 6 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -23,6 +23,7 @@
 - Updated controlled-tab marker to 🐴 and fixed marker removal.
 - Preserved target attachment status for `current_tab` and `set_session` flows.
 - Added remote-specific CDP handshake messaging for cloud websocket failures.
+- Latest sync (`a7c4cb0..389d9c0`, 2026-11-14): docs and domain-skills only; no Python or Rust runtime behavior changed.
 
 ## Migrated Helper/API Surface
 
@@ -1058,3 +1059,61 @@
 - `git diff --check`: the only whitespace notice is on the pre-existing, intentionally-untouched `AGENTS.md` working-tree edit (`AGENTS.md:344: new blank line at EOF`); all migration paths are clean. After staging, `git diff --cached --check` passed (exit 0) and `AGENTS.md` is absent from the index.
 - Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`mapfile: command not found`, exit 127); `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py` passed (`No obvious secrets or local path leaks found in 326 tracked/unignored files`, exit 0).
 - `git diff --cached --name-only` immediately before commit showed only the migration files (3 adds, 2 deletes, 1 audit doc); `AGENTS.md` was not staged.
+
+## Daily Sync — 2026-11-14
+
+- Run date: `2026-11-14`
+- Previous target: `a7c4cb02a3f0cd83e09598d14a2ca65743791998`; new upstream target: `389d9c08fe83641b5af924a777d390e9b61aace3`.
+- Commit range analysed: `a7c4cb02a3f0cd83e09598d14a2ca65743791998..389d9c08fe83641b5af924a777d390e9b61aace3` (`17` commits total: `11` non-merge, `6` merge; `14` files in net upstream diff).
+- Upstream files in range: `README.md` (`+25/-6`) and `13` new domain-skill files under `agent-workspace/domain-skills/<site>/scraping.md`. Docs-only range: zero Python runtime (`src/browser_harness/*.py`) or Rust runtime files changed.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `be4eaa3` | `domain-skills: add free-dictionary, noaa (tides), nobel-prize` | domains | Migrated to `domains/free-dictionary/skill.md`, `domains/noaa/skill.md`, and `domains/nobel-prize/skill.md` |
+| `18a58e4` | `domain-skills: fixes from review (free-dictionary, noaa, nobel-prize)` | domains | Folded into `domains/free-dictionary/skill.md`, `domains/noaa/skill.md`, and `domains/nobel-prize/skill.md` |
+| `65c174a` | `Merge pull request #990 from browser-use/skills/batch-2026-11-09` | merge | Carries `be4eaa3` and `18a58e4` |
+| `cc52cfa` | `domain-skills: add bible-api, swapi, art-institute-chicago` | domains | Migrated to `domains/art-institute-chicago/skill.md`, `domains/bible-api/skill.md`, and `domains/swapi/skill.md` |
+| `0612f19` | `domain-skills: review fixes for bible-api, swapi, art-institute-chicago` | domains | Folded into `domains/art-institute-chicago/skill.md`, `domains/bible-api/skill.md`, and `domains/swapi/skill.md` |
+| `f8a9560` | `Merge pull request #995 from browser-use/skills/batch-2026-11-10` | merge | Carries `cc52cfa` and `0612f19` |
+| `6fa960e` | `README: point to Browser Use` | docs | Adapted into `README.md` (`Acknowledgements` and `Comparison`); skipped Python `uv` setup/MCP snippets |
+| `c7bb3da` | `Merge pull request #997 from browser-use/point-to-browser-use` | merge | Carries `6fa960e` |
+| `5f30185` | `domain-skills: add frankfurter, met-museum, open-trivia` | domains | Migrated to `domains/frankfurter/skill.md`, `domains/met-museum/skill.md`, and `domains/open-trivia/skill.md` |
+| `d3a9b6e` | `domain-skills: review fixes for frankfurter, met-museum, open-trivia` | domains | Folded into `domains/frankfurter/skill.md`, `domains/met-museum/skill.md`, and `domains/open-trivia/skill.md` |
+| `c242094` | `Merge pull request #1002 from browser-use/domain-skills/frankfurter-met-museum-open-trivia` | merge | Carries `5f30185` and `d3a9b6e` |
+| `20e71d7` | `domain-skills: add openfda, tfl, carbon-intensity, police-uk` | domains | Migrated to `domains/carbon-intensity/skill.md`, `domains/openfda/skill.md`, `domains/police-uk/skill.md`, and `domains/tfl/skill.md` |
+| `a2bd153` | `domain-skills: review fixes for openfda, tfl, carbon-intensity, police-uk` | domains | Folded into `domains/carbon-intensity/skill.md`, `domains/openfda/skill.md`, `domains/police-uk/skill.md`, and `domains/tfl/skill.md` |
+| `11e92e1` | `domain-skills: tfl answer fallback, openfda retry wording` | domains | Folded into `domains/openfda/skill.md` and `domains/tfl/skill.md` |
+| `8d7b517` | `Merge pull request #1009 from browser-use/domain-skills/openfda-tfl-carbon-intensity-police-uk` | merge | Carries `20e71d7`, `a2bd153`, and `11e92e1` |
+| `401f664` | `openfda: describe the two-month check accurately` | domains | Folded into `domains/openfda/skill.md` |
+| `389d9c0` | `Merge pull request #1011 from browser-use/domain-skills/openfda-month-wording` | merge | Carries `401f664` |
+
+### Sites Added and Docs Updated
+
+- **13 new `scraping.md` guides mapped to `domains/<site>/skill.md`** (with all review-fix commits folded into final content):
+  `art-institute-chicago`, `bible-api`, `carbon-intensity`, `frankfurter`, `free-dictionary`, `met-museum`, `noaa`, `nobel-prize`, `open-trivia`, `openfda`, `police-uk`, `swapi`, `tfl`.
+- **Legacy `domain-skills/` directory check**:
+  `domain-skills/` does not exist in this repository (`domains/` is the single active domain package root per `domains/README.md`), so no legacy duplicate directory was created.
+- **`README.md` upstream link/naming sync**:
+  Updated `Acknowledgements` and `Comparison` to note that upstream `browser-use/browser-harness` is now the engine inside `browser-use/browser-use` while domain skills and interaction skills stay in `browser-use/browser-harness`, preserving this fork's Rust-native setup prompt and `browser-harness-mcp` binary configuration.
+
+### Mapping Decisions & Applicability Table
+
+| Upstream item | Commits | Decision | Reason |
+| --- | --- | --- | --- |
+| `agent-workspace/domain-skills/<site>/scraping.md` (13 new sites + review fixes) | `be4eaa3`, `18a58e4`, `65c174a`, `cc52cfa`, `0612f19`, `f8a9560`, `5f30185`, `d3a9b6e`, `c242094`, `20e71d7`, `a2bd153`, `11e92e1`, `8d7b517`, `401f664`, `389d9c0` | Mapped final `upstream/main` versions to `domains/<site>/skill.md` | Follows `domains/README.md` convention with `text` code fences for harness pseudocode and stripped trailing whitespace |
+| Legacy `domain-skills/` layout | `a7c4cb0..389d9c0` | Skipped (`domain-skills/` absent locally) | This Rust fork consolidates all domain packages under `domains/<site>/skill.md` |
+| `README.md` ("point to Browser Use") | `6fa960e`, `c7bb3da` | Reflected `browser-use/browser-use` engine relationship in `Acknowledgements` and `Comparison`; skipped `uv` Python install/MCP changes | Mirrors upstream naming/link context where applicable without importing Python packaging instructions into the Rust fork |
+| `domains/README.md` and Rust workspace (`rust/crates/*`, `rust/bins/*`) | `a7c4cb0..389d9c0` | Unchanged | `domains/README.md` uses dynamic `rg --files domains` discovery, and no runtime behavior changed upstream |
+
+### Verification Evidence
+
+- `env -u CFLAGS -u CC MACOSX_DEPLOYMENT_TARGET=11.0 cargo fmt --manifest-path rust/Cargo.toml --all -- --check`: passed (exit 0).
+- `env -u CFLAGS -u CC MACOSX_DEPLOYMENT_TARGET=11.0 cargo check --manifest-path rust/Cargo.toml --workspace`: passed (exit 0).
+- `env -u CFLAGS -u CC MACOSX_DEPLOYMENT_TARGET=11.0 cargo test --manifest-path rust/Cargo.toml --workspace`: passed (`211` unit tests passed, `0` failed across `bh-cdp`, `bh-daemon`, `bh-discovery`, `bh-guest-sdk`, `bh-protocol`, `bh-remote`, `bh-wasm-host`, `bhctl`, `bhd`, `bhrun`, `bhsmoke`, `browser-harness`, and `browser-harness-mcp`, plus `7` doc-test targets; `20` suites total, exit 0).
+- `env -u CFLAGS -u CC MACOSX_DEPLOYMENT_TARGET=11.0 cargo run -q --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0; printed admin/internal/runner command routing usage on stderr).
+- `env -u CFLAGS -u CC MACOSX_DEPLOYMENT_TARGET=11.0 cargo run -q --manifest-path rust/Cargo.toml --bin bhrun -- summary`: passed (`bhrun scaffold: execution_model=PersistentRunner guest_transport=HostCallsOnly protocol_families=5 operations=42 ...`, exit 0).
+- `/usr/bin/git diff --check`: only the pre-existing unstaged `AGENTS.md` working-tree notice (`AGENTS.md:344: new blank line at EOF`) appeared; all migration files are clean.
+- Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`./scripts/scan_sensitive.sh: line 12: mapfile: command not found`, exit 127); substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`, which passed (`No obvious secrets or local path leaks found in 337 tracked/unignored files.`, exit 0).
+- `/usr/bin/git diff --cached --check`: passed (exit 0) with only the 15 migration files staged (`README.md`, `.planning/migration/upstream-sync-2026-04-21.md`, and 13 `domains/<site>/skill.md` files) and `AGENTS.md` unstaged.

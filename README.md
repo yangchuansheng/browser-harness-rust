@@ -24,7 +24,9 @@ not mean Python is required to use this repo.
 
 This project is a Rust reimplementation of the original
 [`browser-use/browser-harness`](https://github.com/browser-use/browser-harness)
-Python harness.
+Python harness, which is now the engine inside
+[Browser Use](https://github.com/browser-use/browser-use) (while domain skills
+and interaction skills stay in `browser-use/browser-harness`).
 
 The core harness idea and direction came from that upstream project. Many
 thanks to the `browser-use` maintainers for creating and sharing the original
@@ -99,7 +101,7 @@ Browser Harness should be read against the two adjacent Browser Use projects:
 
 | Project | Main shape | Best when | Tradeoff |
 | --- | --- | --- | --- |
-| [`browser-use/browser-harness`](https://github.com/browser-use/browser-harness) | Tiny Python harness with editable helper files and a small daemon bridge | You want the original minimal harness exactly as designed | Smaller and simpler, but less suited to a larger typed runtime surface |
+| [`browser-use/browser-harness`](https://github.com/browser-use/browser-harness) | Tiny Python harness (now the engine inside [Browser Use](https://github.com/browser-use/browser-use)) with editable helper files and a small daemon bridge | You want the original minimal harness or `browser-use` CLI | Smaller and simpler, but less suited to a larger typed runtime surface |
 | [`browser-use/browser-harness-js`](https://github.com/browser-use/browser-harness-js) | JS/TS CDP surface with generated protocol wrappers and almost no helpers | You want protocol-level freedom in JS/TS and are happy writing close to raw CDP | Maximum flexibility, but more protocol-shaped and less ergonomic for repeated higher-level workflows |
 | [`yangchuansheng/browser-harness`](https://github.com/yangchuansheng/browser-harness) (this repo) | Rust daemon + runner + CLI + guest runtime | You want the harness idea, but as a durable systems runtime with stable operations and a WASM path | Heavier than the original Python harness, less raw than the JS variant |
 
