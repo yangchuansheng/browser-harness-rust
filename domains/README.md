@@ -21,8 +21,11 @@ Rules:
 - Read every file in a matching `domains/<site>/` directory when
   `BH_DOMAIN_SKILLS=1` and the task is site-specific.
 - Upstream `scraping.md` files are mapped to `skill.md` in this fork.
-- Upstream `domain-skills/` and `agent-workspace/domain-skills/` entries are
-  mapped into this `domains/` tree instead of keeping legacy duplicate roots.
+- Upstream `domain-skills/` and `agent-workspace/domain-skills/` entries map to
+  `domains/<site>/skill.md`; synced upstream additions (`aviationweather`,
+  `bank-of-canada`, `eurostat`, `gbif`, `oecd`, `ourworldindata`,
+  `swiss-transport`, and `uniprot`) also keep verbatim mirrors at
+  `agent-workspace/domain-skills/<site>/scraping.md`.
 - Extra notes can live beside `skill.md` for task-specific flows.
 - Executable Rust guests still live under [`../rust/guests/`](../rust/guests/)
   unless a site explicitly grows its own guest package.
@@ -37,5 +40,7 @@ rg --files domains
 find domains -maxdepth 1 -type d | sort
 ```
 
-When adding or updating a site, prefer `domains/<site>/` and avoid secrets,
-cookies, session tokens, task narration, and raw pixel coordinates.
+When adding or updating a site, prefer `domains/<site>/` (plus a verbatim
+`agent-workspace/domain-skills/<site>/scraping.md` mirror when syncing upstream
+domain skills) and avoid secrets, cookies, session tokens, task narration, and
+raw pixel coordinates.

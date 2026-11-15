@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `389d9c08fe83641b5af924a777d390e9b61aace3`
-- Commit range: `a7c4cb02a3f0cd83e09598d14a2ca65743791998..389d9c08fe83641b5af924a777d390e9b61aace3`
-- Count: 17 commits (11 non-merge, 6 merge)
+- Upstream target commit: `189479961591af69b9c62ed2892d983aca7a1105`
+- Commit range: `389d9c08fe83641b5af924a777d390e9b61aace3..189479961591af69b9c62ed2892d983aca7a1105`
+- Count: 15 commits (11 non-merge, 4 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -1117,3 +1117,60 @@
 - `/usr/bin/git diff --check`: only the pre-existing unstaged `AGENTS.md` working-tree notice (`AGENTS.md:344: new blank line at EOF`) appeared; all migration files are clean.
 - Sensitive/local-path scan: `./scripts/scan_sensitive.sh` fails on macOS `/bin/bash` 3.2 due to Bash 4 `mapfile` (`./scripts/scan_sensitive.sh: line 12: mapfile: command not found`, exit 127); substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`, which passed (`No obvious secrets or local path leaks found in 337 tracked/unignored files.`, exit 0).
 - `/usr/bin/git diff --cached --check`: passed (exit 0) with only the 15 migration files staged (`README.md`, `.planning/migration/upstream-sync-2026-04-21.md`, and 13 `domains/<site>/skill.md` files) and `AGENTS.md` unstaged.
+
+## Daily Sync — 2026-11-16
+
+- Run date: `2026-11-16`
+- Previous target: `389d9c08fe83641b5af924a777d390e9b61aace3`; new upstream target: `189479961591af69b9c62ed2892d983aca7a1105`.
+- Commit range analysed: `389d9c08fe83641b5af924a777d390e9b61aace3..189479961591af69b9c62ed2892d983aca7a1105` (`15` commits total: `11` non-merge, `4` merge; `8` files in net upstream diff).
+- Upstream files in range: `8` new domain-skill files under `agent-workspace/domain-skills/<site>/scraping.md` (`+3495` lines, zero deletions). Docs-only range: no Python runtime (`src/browser_harness/*.py`), `README.md`, or Rust runtime files changed.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `1e0d64d` | `domain-skills: add ourworldindata, eurostat, aviationweather, gbif` | domains | Migrated to `domains/ourworldindata/skill.md`, `domains/eurostat/skill.md`, `domains/aviationweather/skill.md`, and `domains/gbif/skill.md` |
+| `90b9c64` | `domain-skills: review fixes for ourworldindata, aviationweather, gbif` | domains | Folded into `domains/aviationweather/skill.md`, `domains/gbif/skill.md`, and `domains/ourworldindata/skill.md` |
+| `dba74c0` | `domain-skills: aviationweather TAF groups, inherit only for partial groups` | domains | Folded into `domains/aviationweather/skill.md` |
+| `46b7c43` | `Merge pull request #1012 from browser-use/domain-skills/owid-eurostat-awc-gbif` | merge | Carries `1e0d64d`, `90b9c64`, and `dba74c0` |
+| `a9a615f` | `domain-skills: eurostat 413 means queued, not refused` | domains | Folded into `domains/eurostat/skill.md` |
+| `007f150` | `domain-skills: eurostat 413 gotcha names the blocks that stop` | domains | Folded into `domains/eurostat/skill.md` |
+| `f81992a` | `Merge pull request #1013 from browser-use/domain-skills/eurostat-413-wording` | merge | Carries `a9a615f` and `007f150` |
+| `fba00f0` | `domain-skills: add uniprot, swiss-transport, oecd, bank-of-canada` | domains | Migrated to `domains/uniprot/skill.md`, `domains/swiss-transport/skill.md`, `domains/oecd/skill.md`, and `domains/bank-of-canada/skill.md` |
+| `8bab039` | `domain-skills: address review on uniprot, swiss-transport, bank-of-canada` | domains | Folded into `domains/uniprot/skill.md`, `domains/swiss-transport/skill.md`, and `domains/bank-of-canada/skill.md` |
+| `555078d` | `Merge pull request #1016 from browser-use/domain-skills/uniprot-swiss-transport-oecd-boc` | merge | Carries `fba00f0` and `8bab039` |
+| `7d13481` | `bank-of-canada: compare schedule dates in Eastern Time, not UTC` | domains | Folded into `domains/bank-of-canada/skill.md` |
+| `6c9412f` | `bank-of-canada: gotcha for Ottawa dates and tzdata on Windows` | domains | Folded into `domains/bank-of-canada/skill.md` |
+| `f8b5a26` | `bank-of-canada: say the re-run's values match and name the changed label` | domains | Folded into `domains/bank-of-canada/skill.md` |
+| `43101a6` | `bank-of-canada: stop with "pip install tzdata" when no time zone data exists` | domains | Folded into `domains/bank-of-canada/skill.md` |
+| `1894799` | `Merge pull request #1017 from browser-use/skills/bank-of-canada-et-date` | merge | Carries `7d13481`, `6c9412f`, `f8b5a26`, and `43101a6` |
+
+### Sites Added and Legacy Mirrors
+
+- **8 new `scraping.md` guides mapped to `domains/<site>/skill.md`** (all review-fix commits folded into final `upstream/main` content):
+  `aviationweather`, `bank-of-canada`, `eurostat`, `gbif`, `oecd`, `ourworldindata`, `swiss-transport`, `uniprot`.
+- **Legacy `agent-workspace/domain-skills/<site>/scraping.md` mirrors created**: this run also syncs the upstream `agent-workspace/domain-skills/` path verbatim (identical to `upstream/main` apart from stripped trailing whitespace, as with every other upstream file copied here) so both the upstream and `domains/` layouts carry the knowledge. `domains/README.md` was updated to state that mirrored additions keep a verbatim legacy copy, replacing the earlier "skip legacy roots" rule.
+- **Normalization kept for `domains/<site>/skill.md`**: `python` code fences become `text` (harness pseudocode) and trailing whitespace is stripped, per the established `domains/README.md` convention. Every one of the 8 files is byte-identical to `upstream/main` after applying only those two transformations.
+
+### Mapping Decisions & Applicability Table
+
+| Upstream item | Commits | Decision | Reason |
+| --- | --- | --- | --- |
+| `agent-workspace/domain-skills/<site>/scraping.md` (8 new sites + review fixes) | `1e0d64d`, `90b9c64`, `dba74c0`, `46b7c43`, `a9a615f`, `007f150`, `f81992a`, `fba00f0`, `8bab039`, `555078d`, `7d13481`, `6c9412f`, `f8b5a26`, `43101a6`, `1894799` | Mapped to `domains/<site>/skill.md` with `text` fences and stripped trailing whitespace | Follows `domains/README.md` convention |
+| Legacy `agent-workspace/domain-skills/<site>/scraping.md` layout | same range | Now mirrored verbatim per site | Sync contract requires covering the legacy path as well as `domains/`; `domain-skills/` (the older root) still does not exist upstream or locally, so nothing to mirror there |
+| `domains/README.md` | `389d9c0..1894799` | Updated legacy-mirror rule | The previous wording said legacy roots are skipped, which no longer matches the sync contract |
+| `scripts/scan_sensitive.sh` | `389d9c0..1894799` | Refined the "Local Linux home path" pattern to `(?<![\w./-])/home/[A-Za-z0-9._-]+/` | The Eurostat skill quotes a robots.txt rule `/eurostat/home/-/search/data-browser`; the unanchored pattern read that URL as a local home path and failed CI. The lookbehind keeps real `/home/<user>/` paths failing while ignoring longer URL fragments |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | `389d9c0..1894799` | Unchanged | Upstream range is domain-skill documentation only |
+
+### Verification Evidence
+
+- `env -u CFLAGS -u CC MACOSX_DEPLOYMENT_TARGET=11.0 cargo fmt --all --manifest-path rust/Cargo.toml -- --check`: passed (exit 0).
+- `env -u CFLAGS -u CC MACOSX_DEPLOYMENT_TARGET=11.0 cargo test --workspace --manifest-path rust/Cargo.toml`: passed — `211 passed (20 suites)`, exit 0.
+- `env -u CFLAGS -u CC MACOSX_DEPLOYMENT_TARGET=11.0 cargo run -q --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit 0) and printed the full admin/internal/runner command routing surface.
+- `... cargo run -q --manifest-path rust/Cargo.toml --bin bhrun -- summary`: passed (exit 0; `execution_model=PersistentRunner ... operations=42`).
+- `... cargo run -q --manifest-path rust/Cargo.toml --bin browser-harness -- doctor`: passed (exit 0; emitted `{"daemon":{"alive":false,...},"healthy":false,"schemaVersion":1}` with no daemon running).
+- `/usr/bin/git diff --check`: only the pre-existing, intentionally untouched `AGENTS.md` working-tree notice (`AGENTS.md:344: new blank line at EOF`); every migration path is clean.
+- Upstream fidelity: each `domains/<site>/skill.md` equals `git show upstream/main:agent-workspace/domain-skills/<site>/scraping.md` after only the two documented normalizations (`diff` reported identical for all 8); each legacy mirror is likewise identical to `upstream/main` apart from stripped trailing whitespace.
+- Sensitive/local-path scan: `./scripts/scan_sensitive.sh` cannot run here (needs `rg`, absent; plus Bash 4 `mapfile` on macOS `/bin/bash` 3.2). Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`, same 12 patterns, which passed (`No obvious secrets or local path leaks found in 353 tracked/unignored files.`, exit 0). Negative control confirmed the tightened Linux pattern still flags a real `/home/<user>/data.json` path.
+- `/usr/bin/git diff --cached --check`: passed (exit 0) with exactly 19 staged paths (8 `domains/<site>/skill.md`, 8 `agent-workspace/domain-skills/<site>/scraping.md`, `domains/README.md`, `scripts/scan_sensitive.sh`, and the audit file); `AGENTS.md` absent from the index.
+- `AGENTS.md`: left uncommitted and unmodified by this run (pre-existing working-tree edit, absent from the index).
