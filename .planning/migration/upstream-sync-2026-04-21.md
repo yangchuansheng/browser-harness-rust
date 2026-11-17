@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `189479961591af69b9c62ed2892d983aca7a1105`
-- Commit range: `389d9c08fe83641b5af924a777d390e9b61aace3..189479961591af69b9c62ed2892d983aca7a1105`
-- Count: 15 commits (11 non-merge, 4 merge)
+- Upstream target commit: `bc274a297d893e94ee05b4901898809651876a2d`
+- Commit range: `189479961591af69b9c62ed2892d983aca7a1105..bc274a297d893e94ee05b4901898809651876a2d`
+- Count: 13 commits (9 non-merge, 4 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -1173,4 +1173,76 @@
 - Upstream fidelity: each `domains/<site>/skill.md` equals `git show upstream/main:agent-workspace/domain-skills/<site>/scraping.md` after only the two documented normalizations (`diff` reported identical for all 8); each legacy mirror is likewise identical to `upstream/main` apart from stripped trailing whitespace.
 - Sensitive/local-path scan: `./scripts/scan_sensitive.sh` cannot run here (needs `rg`, absent; plus Bash 4 `mapfile` on macOS `/bin/bash` 3.2). Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`, same 12 patterns, which passed (`No obvious secrets or local path leaks found in 353 tracked/unignored files.`, exit 0). Negative control confirmed the tightened Linux pattern still flags a real `/home/<user>/data.json` path.
 - `/usr/bin/git diff --cached --check`: passed (exit 0) with exactly 19 staged paths (8 `domains/<site>/skill.md`, 8 `agent-workspace/domain-skills/<site>/scraping.md`, `domains/README.md`, `scripts/scan_sensitive.sh`, and the audit file); `AGENTS.md` absent from the index.
+- `AGENTS.md`: left uncommitted and unmodified by this run (pre-existing working-tree edit, absent from the index).
+
+## Daily Sync — 2026-11-18
+
+- Run date: `2026-11-18`
+- Previous target: `189479961591af69b9c62ed2892d983aca7a1105`; new upstream target: `bc274a297d893e94ee05b4901898809651876a2d`.
+- Commit range analysed: `189479961591af69b9c62ed2892d983aca7a1105..bc274a297d893e94ee05b4901898809651876a2d` (`13` commits total: `9` non-merge, `4` merge; `10` files in net upstream diff).
+- Upstream files in range: `8` new domain-skill files under `agent-workspace/domain-skills/<site>/scraping.md` (`+4331` lines), plus `pyproject.toml` (version bump) and `src/browser_harness/auth.py` (`+24/-1`). The two Python files are not ported (see Mapping Decisions).
+- Execution lane: a single non-interactive `codex exec` run performed the docs migration on disk (created all 8×2 skill files and updated `domains/README.md`); the parent staged, verified, committed, and pushed.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `623e1c0` | `domain-skills: add rxnorm, gleif, npi-registry, osv` | domains | Migrated to `domains/rxnorm/skill.md`, `domains/gleif/skill.md`, `domains/npi-registry/skill.md`, `domains/osv/skill.md` (folded with review fixes below) |
+| `2460e67` | `domain-skills: address review on rxnorm, gleif, npi-registry, osv` | domains | Folded into final per-site content |
+| `6fa5788` | `domain-skills: npi-registry reports a result_count mismatch apart from the 200 cap` | domains | Folded into final per-site content |
+| `15a0d7b` | `Show a clean, styled page after Cloud login` | Python auth | Not applicable — Python OAuth device-login callback page |
+| `234ab62` | `Show the signed-in line only when the callback carries a code` | Python auth | Not applicable — Python OAuth device-login callback page |
+| `606ca86` | `domain-skills: add faa-nas-status, icd-10-cm, census-geocoder, energi-data-service` | domains | Migrated to `domains/faa-nas-status/skill.md`, `domains/icd-10-cm/skill.md`, `domains/census-geocoder/skill.md`, `domains/energi-data-service/skill.md` (folded with review fixes below) |
+| `8604d2c` | `domain-skills: address review on faa, icd-10-cm, census, energi skills` | domains | Folded into final per-site content |
+| `1848832` | `domain-skills: retry the icd-10-cm home page read; date census re-run` | domains | Folded into final per-site content |
+| `c2b684b` | `domain-skills: stop on long Retry-After (icd-10-cm); refresh time after 429 wait (energi-data-service)` | domains | Folded into final per-site content |
+| `8ec26f6` | `Merge pull request #1032 from browser-use/domain-skills/rxnorm-gleif-npi-osv` | merge | Carries `623e1c0`, `2460e67`, `6fa5788` |
+| `66edb13` | `Merge pull request #1035 from browser-use/login-flow-polish-page` | merge | Carries `15a0d7b`, `234ab62` (Python only) |
+| `a0665cc` | `Merge pull request #1036 from browser-use/domain-skills/faa-icd-census-energi` | merge | Carries `606ca86`, `8604d2c`, `1848832`, `c2b684b` |
+| `bc274a2` | `Merge pull request #1037 from browser-use/seo/skills-1116-fixes` | merge | Final upstream `main` head; carries the two feature branches |
+
+### Sites Added and Legacy Mirrors
+
+- **8 new upstream `scraping.md` guides mapped to `domains/<site>/skill.md`** (all review-fix commits folded into final `upstream/main` content):
+  `census-geocoder`, `energi-data-service`, `faa-nas-status`, `gleif`, `icd-10-cm`, `npi-registry`, `osv`, `rxnorm`.
+- **Legacy `agent-workspace/domain-skills/<site>/scraping.md` mirrors created** for all 8 sites, identical to the corresponding `domains/<site>/skill.md` after normalization, per the sync contract.
+- **Normalization** for every file (both paths): `^```python$` fences become `^```text$`, and trailing whitespace is stripped on every line; content otherwise byte-identical to `upstream/main`.
+
+| Upstream path | `domains/` destination | Legacy mirror |
+| --- | --- | --- |
+| `agent-workspace/domain-skills/census-geocoder/scraping.md` | `domains/census-geocoder/skill.md` | `agent-workspace/domain-skills/census-geocoder/scraping.md` |
+| `agent-workspace/domain-skills/energi-data-service/scraping.md` | `domains/energi-data-service/skill.md` | `agent-workspace/domain-skills/energi-data-service/scraping.md` |
+| `agent-workspace/domain-skills/faa-nas-status/scraping.md` | `domains/faa-nas-status/skill.md` | `agent-workspace/domain-skills/faa-nas-status/scraping.md` |
+| `agent-workspace/domain-skills/gleif/scraping.md` | `domains/gleif/skill.md` | `agent-workspace/domain-skills/gleif/scraping.md` |
+| `agent-workspace/domain-skills/icd-10-cm/scraping.md` | `domains/icd-10-cm/skill.md` | `agent-workspace/domain-skills/icd-10-cm/scraping.md` |
+| `agent-workspace/domain-skills/npi-registry/scraping.md` | `domains/npi-registry/skill.md` | `agent-workspace/domain-skills/npi-registry/scraping.md` |
+| `agent-workspace/domain-skills/osv/scraping.md` | `domains/osv/skill.md` | `agent-workspace/domain-skills/osv/scraping.md` |
+| `agent-workspace/domain-skills/rxnorm/scraping.md` | `domains/rxnorm/skill.md` | `agent-workspace/domain-skills/rxnorm/scraping.md` |
+
+- **`domains/README.md`** updated to list the 8 sites in the mirror rule and to add a "Synced upstream skills" capability table with each site's one-line description.
+
+### Mapping Decisions & Applicability Table
+
+| Upstream item | Commits | Decision | Reason |
+| --- | --- | --- | --- |
+| `agent-workspace/domain-skills/<site>/scraping.md` (8 new sites + review fixes) | `623e1c0`, `2460e67`, `6fa5788`, `606ca86`, `8604d2c`, `1848832`, `c2b684b` | Mapped to `domains/<site>/skill.md` (final `upstream/main` state) with `text` fences and stripped trailing whitespace, plus a byte-identical legacy mirror | Follows `domains/README.md` convention and the sync contract |
+| `src/browser_harness/auth.py` | `15a0d7b`, `234ab62` | Not applicable — no Python runtime import | Rust fork has no OAuth device-login callback flow: a case-insensitive grep of `rust/**/*.rs` for `callback`, `oauth`, `device_login`, `device_flow`, `sign_in`/`sign-in` returned zero matches. The only login-related code is API-key login (`bh-remote`, `bhctl`) and a Reddit login-wall detector (`bhsmoke`, `rust-reddit-post-scrape`), neither of which is a browser-login callback handler. No behavior to port. |
+| `pyproject.toml` (version `0.1.13` → `0.1.14`) | (part of PR #1037) | Not applicable — Python packaging metadata | Rust workspace keeps its own crate versions (`0.1.13` across the workspace). |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | — | Unchanged | Upstream range is domain-skill docs plus Python-only auth/packaging changes |
+
+### Verification Evidence
+
+- Pre-run `git status --porcelain`: only ` M AGENTS.md` (pre-existing, intentionally untouched); `HEAD` was a descendant of `origin/main` before any work.
+- `codex exec` (single non-interactive lane): completed with exit 0; created all 8 `domains/<site>/skill.md` + 8 legacy mirrors and updated `domains/README.md`; did not stage/commit/push.
+- Upstream fidelity: all 16 files byte-identical to `git show upstream/main:agent-workspace/domain-skills/<site>/scraping.md` after only the two documented normalizations (` ```python` → ` ```text`, strip trailing whitespace); zero ` ```python` fences and zero trailing-whitespace lines remain.
+- `env -u CFLAGS -u CC cargo fmt --manifest-path rust/Cargo.toml --all -- --check`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo check --manifest-path rust/Cargo.toml --workspace`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace`: passed — `211 passed`, `0 failed` (exit 0).
+- `env -u CFLAGS -u CC cargo build --manifest-path rust/Cargo.toml --workspace`: passed (exit 0).
+- CLI smoke (all via `cargo run -q --manifest-path rust/Cargo.toml`):
+  - `--bin browser-harness -- --help`: exit 0 (full admin/runner routing surface printed).
+  - `--bin browser-harness -- summary`: exit 0; `execution_model=PersistentRunner ... operations=42`. (`--bin bhrun -- summary` also exit 0 with the same output.) Note: the literal facade form `browser-harness bhrun summary` returns exit 1 ("unsupported bhrun command") because the facade routes runner commands directly without a `bhrun` token; the correct runner summary smoke is `browser-harness summary`.
+  - `--bin browser-harness -- doctor`: exit 0; `{"daemon":{"alive":false,"browserKind":"local","name":"default"},"healthy":false,"schemaVersion":1}`.
+- Sensitive/local-path scan: `scripts/scan_sensitive.sh` cannot run here (needs `rg`, absent; plus Bash 4 `mapfile` on macOS `/bin/bash` 3.2). Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`, which passed (`No obvious secrets or local path leaks found in 369 tracked/unignored files.`, exit 0).
+- `/usr/bin/git diff --cached --check`: see post-staging evidence below.
 - `AGENTS.md`: left uncommitted and unmodified by this run (pre-existing working-tree edit, absent from the index).
