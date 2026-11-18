@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `bc274a297d893e94ee05b4901898809651876a2d`
-- Commit range: `189479961591af69b9c62ed2892d983aca7a1105..bc274a297d893e94ee05b4901898809651876a2d`
-- Count: 13 commits (9 non-merge, 4 merge)
+- Upstream target commit: `4cccf3b8daf992227a6c9019ffbce5f7a2844280`
+- Commit range: `bc274a297d893e94ee05b4901898809651876a2d..4cccf3b8daf992227a6c9019ffbce5f7a2844280`
+- Count: 8 commits (5 non-merge, 3 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -1246,3 +1246,54 @@
 - Sensitive/local-path scan: `scripts/scan_sensitive.sh` cannot run here (needs `rg`, absent; plus Bash 4 `mapfile` on macOS `/bin/bash` 3.2). Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`, which passed (`No obvious secrets or local path leaks found in 369 tracked/unignored files.`, exit 0).
 - `/usr/bin/git diff --cached --check`: see post-staging evidence below.
 - `AGENTS.md`: left uncommitted and unmodified by this run (pre-existing working-tree edit, absent from the index).
+
+## Daily Sync — 2026-11-19
+
+- Run date: `2026-11-19`
+- Previous target: `bc274a297d893e94ee05b4901898809651876a2d`; new upstream target: `4cccf3b8daf992227a6c9019ffbce5f7a2844280`.
+- Commit range analysed: `bc274a297d893e94ee05b4901898809651876a2d..4cccf3b8daf992227a6c9019ffbce5f7a2844280` (`8` commits total: `5` non-merge, `3` merge; `7` files in net upstream diff, `+2495` lines).
+- Upstream files in range: `4` new domain-skill files under `agent-workspace/domain-skills/<site>/scraping.md`, plus `SKILL.md` (`+26`), `install.md` (`+5`), and `skills/browser-harness/references/install.md` (`+5`). No Python runtime, packaging, or test files changed.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `6d338da` | `Ask coding agents for integration feedback in SKILL.md and install docs` | docs | Migrated: `## Feedback` section added to `SKILL.md`, `install.md`, and `skills/browser-harness/references/install.md` |
+| `f9c4a7a` | `Merge pull request #1040 from browser-use/feedback-everywhere` | merge | Carries `6d338da` |
+| `00cfafa` | `domain-skills: add cpsc-recalls, openfema, usgs-elevation, medlineplus` | domains | Migrated to `domains/{cpsc-recalls,medlineplus,openfema,usgs-elevation}/skill.md` (folded with review fixes below) |
+| `c9282df` | `domain-skills: address review on cpsc-recalls, openfema, usgs-elevation` | domains | Folded into final per-site content |
+| `b1d4e00` | `domain-skills: cpsc-recalls user-agent gotcha names which blocks send which agent` | domains | Folded into final per-site content |
+| `036d987` | `Merge pull request #1041 from browser-use/domain-skills/aeo-2026-11-17` | merge | Carries `00cfafa`, `c9282df`, `b1d4e00` |
+| `4f3648d` | `domain-skills: openfema and usgs-elevation fixes from website review` | domains | Folded into final per-site content |
+| `4cccf3b` | `Merge pull request #1043 from browser-use/domain-skills/aeo-2026-11-17-fixes` | merge | Final upstream `main` head; carries `4f3648d` |
+
+### Mapping Decisions
+
+| Upstream path | Destination | Decision |
+| --- | --- | --- |
+| `agent-workspace/domain-skills/cpsc-recalls/scraping.md` | `domains/cpsc-recalls/skill.md` + legacy mirror `agent-workspace/domain-skills/cpsc-recalls/scraping.md` | Migrated |
+| `agent-workspace/domain-skills/medlineplus/scraping.md` | `domains/medlineplus/skill.md` + legacy mirror `agent-workspace/domain-skills/medlineplus/scraping.md` | Migrated |
+| `agent-workspace/domain-skills/openfema/scraping.md` | `domains/openfema/skill.md` + legacy mirror `agent-workspace/domain-skills/openfema/scraping.md` | Migrated |
+| `agent-workspace/domain-skills/usgs-elevation/scraping.md` | `domains/usgs-elevation/skill.md` + legacy mirror `agent-workspace/domain-skills/usgs-elevation/scraping.md` | Migrated |
+| `SKILL.md` (`## Feedback`) | `SKILL.md`, inserted before `## Gotchas (field-tested)` (same position as upstream) | Migrated verbatim; the section only uses the Browser Use feedback HTTP API (`curl` + `BROWSER_USE_API_KEY`, the same env var the Rust `bhctl`/`bhd` read) and the external Browser Use CLI, so no Python runtime dependency is introduced into this fork |
+| `install.md` (`## Feedback`) | `install.md`, inserted after the browser bootstrap steps and before `## Recording Consent` (this fork has no `## If Still Broken` section) | Migrated |
+| `skills/browser-harness/references/install.md` (`## Feedback`) | `skills/browser-harness/references/install.md` (directory already exists in this fork), inserted before `## Keeping current` | Mirrored at the same relative path |
+| — | `domains/README.md` | Added the 4 sites to the legacy-mirror list and the synced-skills table |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | — | Unchanged; upstream range is docs and domain skills only |
+
+- Normalization for every domain-skill file (both paths): `^```python$` fences become `^```text$`, and trailing whitespace is stripped; content otherwise identical to `upstream/main`. Verified with `cmp` against the normalized `git show upstream/main:...` output for all 4 sites, and each legacy mirror is byte-identical to its `domains/<site>/skill.md`.
+
+### Verification Evidence
+
+- Pre-run: `HEAD` == `origin/main` == `a8b4b67d20367a4947a84f201758839ed66c9f59`; `upstream/main` == `4cccf3b8daf992227a6c9019ffbce5f7a2844280`; `git status --short` showed only ` M AGENTS.md` (pre-existing, intentionally untouched).
+- `cargo fmt --all --manifest-path rust/Cargo.toml --check`: passed (exit 0).
+- `cargo test --workspace --manifest-path rust/Cargo.toml`: passed — `211 passed`, `0 failed` (exit 0).
+- `cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0).
+- CLI smoke on built binaries (`rust/target/debug/*`):
+  - `browser-harness --help`: exit 0 (admin/runner routing usage printed).
+  - `bhrun --help`: prints the full command usage but exits 1 (`unsupported bhrun command`); `bhrun` has no dedicated help flag, so this is existing behavior. `bhrun summary`: exit 0 (`execution_model=PersistentRunner ... operations=42`).
+  - `browser-harness summary`: exit 0 (same runner summary through the facade).
+  - `bhctl --help`: exit 1 with the expected-command list (`bhctl` has no help flag; existing behavior).
+- `git diff --check`: reports only `AGENTS.md:344: new blank line at EOF` (the pre-existing out-of-scope edit); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
+- Sensitive scan: `./scripts/scan_sensitive.sh` exits 127 on macOS (`mapfile: command not found` under `/bin/bash` 3.2.57). Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py` (no repo-local `scripts/scan_sensitive_fallback.py` exists): `No obvious secrets or local path leaks found in 377 tracked/unignored files.` (exit 0). An extra pattern grep for API-key/token/local-path shapes on all new and edited docs returned no matches.
+- `AGENTS.md`: left unmodified and unstaged by this run.

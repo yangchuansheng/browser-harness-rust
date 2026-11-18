@@ -26,7 +26,8 @@ Rules:
   `bank-of-canada`, `eurostat`, `gbif`, `oecd`, `ourworldindata`,
   `swiss-transport`, and `uniprot`, plus `census-geocoder`,
   `energi-data-service`, `faa-nas-status`, `gleif`, `icd-10-cm`,
-  `npi-registry`, `osv`, and `rxnorm`) also keep verbatim mirrors at
+  `npi-registry`, `osv`, and `rxnorm`, plus `cpsc-recalls`, `medlineplus`,
+  `openfema`, and `usgs-elevation`) also keep verbatim mirrors at
   `agent-workspace/domain-skills/<site>/scraping.md`.
 - Extra notes can live beside `skill.md` for task-specific flows.
 - Executable Rust guests still live under [`../rust/guests/`](../rust/guests/)
@@ -47,13 +48,17 @@ find domains -maxdepth 1 -type d | sort
 | Site | Capability |
 |------|------------|
 | `census-geocoder` | Geocode U.S. addresses and coordinates to county, census tract, block, and congressional-district layers. |
+| `cpsc-recalls` | Check whether a product has a U.S. CPSC recall, with recall number, date, hazard, units, and remedy. |
 | `energi-data-service` | Query Danish DK1/DK2 day-ahead electricity prices and find the cheapest appliance windows. |
 | `faa-nas-status` | Check U.S. airports for active ground stops, ground-delay programs, closures, reasons, and delays in the FAA XML feed. |
 | `gleif` | Find legal entities by name, inspect LEI status and registration data, and list reported direct subsidiaries. |
 | `icd-10-cm` | Resolve condition descriptions to ICD-10-CM codes or look up a code's official name via NLM CTSS. |
+| `medlineplus` | Get the plain-language MedlinePlus health-topic summary and page link for a condition. |
 | `npi-registry` | Verify U.S. clinicians and organizations by NPI, including taxonomy, practice address, and reported state licence. |
+| `openfema` | List FEMA disaster declarations for a U.S. county or state, with incident type and declared assistance programs. |
 | `osv` | Check pinned dependency versions for known vulnerabilities, aliases, severity, and fixed versions. |
 | `rxnorm` | Normalize drug names to RxCUI concepts and list brands, clinical drugs, strengths, and dose forms. |
+| `usgs-elevation` | Look up ground elevation for a latitude/longitude point via the USGS Elevation Point Query Service. |
 
 When adding or updating a site, prefer `domains/<site>/` (plus a verbatim
 `agent-workspace/domain-skills/<site>/scraping.md` mirror when syncing upstream

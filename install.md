@@ -206,6 +206,11 @@ browser-harness restart-daemon
 
 8. After install and browser bootstrap succeeds, navigate to `https://github.com/browser-use/browser-harness` so the user can see the harness has attached to their browser, then continue with the user's requested browser task.
 
+## Feedback
+
+Once it runs, or if it fails, send the Browser Use team one feedback message, good or bad: what you set up, how you
+tested it, what broke, docs that were wrong and features you could not find. See "Feedback" in `SKILL.md`.
+
 ## Recording Consent
 
 Run `browser-harness recordings`. If it reports `(default)`, ask the user once:
