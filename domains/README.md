@@ -27,7 +27,8 @@ Rules:
   `swiss-transport`, and `uniprot`, plus `census-geocoder`,
   `energi-data-service`, `faa-nas-status`, `gleif`, `icd-10-cm`,
   `npi-registry`, `osv`, and `rxnorm`, plus `cpsc-recalls`, `medlineplus`,
-  `openfema`, and `usgs-elevation`) also keep verbatim mirrors at
+  `openfema`, and `usgs-elevation`, plus `endoflife-date`, `epss`,
+  `fdic-bankfind`, and `nyc-open-data`) also keep verbatim mirrors at
   `agent-workspace/domain-skills/<site>/scraping.md`.
 - Extra notes can live beside `skill.md` for task-specific flows.
 - Executable Rust guests still live under [`../rust/guests/`](../rust/guests/)
@@ -49,12 +50,16 @@ find domains -maxdepth 1 -type d | sort
 |------|------------|
 | `census-geocoder` | Geocode U.S. addresses and coordinates to county, census tract, block, and congressional-district layers. |
 | `cpsc-recalls` | Check whether a product has a U.S. CPSC recall, with recall number, date, hazard, units, and remedy. |
+| `endoflife-date` | Check whether a software version is still supported and when it reaches end of life via the endoflife.date API. |
 | `energi-data-service` | Query Danish DK1/DK2 day-ahead electricity prices and find the cheapest appliance windows. |
+| `epss` | Get the exploitation probability and percentile for a list of CVEs to decide which to patch first via the FIRST API. |
 | `faa-nas-status` | Check U.S. airports for active ground stops, ground-delay programs, closures, reasons, and delays in the FAA XML feed. |
+| `fdic-bankfind` | Check whether a bank is open and FDIC-insured, get its CERT number, assets and branches, or list recent bank failures. |
 | `gleif` | Find legal entities by name, inspect LEI status and registration data, and list reported direct subsidiaries. |
 | `icd-10-cm` | Resolve condition descriptions to ICD-10-CM codes or look up a code's official name via NLM CTSS. |
 | `medlineplus` | Get the plain-language MedlinePlus health-topic summary and page link for a condition. |
 | `npi-registry` | Verify U.S. clinicians and organizations by NPI, including taxonomy, practice address, and reported state licence. |
+| `nyc-open-data` | Get a NYC restaurant's latest health inspection score, grade and violations, or the latest 311 complaints for a ZIP code. |
 | `openfema` | List FEMA disaster declarations for a U.S. county or state, with incident type and declared assistance programs. |
 | `osv` | Check pinned dependency versions for known vulnerabilities, aliases, severity, and fixed versions. |
 | `rxnorm` | Normalize drug names to RxCUI concepts and list brands, clinical drugs, strengths, and dose forms. |

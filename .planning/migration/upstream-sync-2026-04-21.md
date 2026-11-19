@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `4cccf3b8daf992227a6c9019ffbce5f7a2844280`
-- Commit range: `bc274a297d893e94ee05b4901898809651876a2d..4cccf3b8daf992227a6c9019ffbce5f7a2844280`
-- Count: 8 commits (5 non-merge, 3 merge)
+- Upstream target commit: `fe4a2cd3dd308e8de929621e64e7f284d7a124d7`
+- Commit range: `4cccf3b8daf992227a6c9019ffbce5f7a2844280..fe4a2cd3dd308e8de929621e64e7f284d7a124d7`
+- Count: 7 commits (5 non-merge, 2 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -1296,4 +1296,51 @@
   - `bhctl --help`: exit 1 with the expected-command list (`bhctl` has no help flag; existing behavior).
 - `git diff --check`: reports only `AGENTS.md:344: new blank line at EOF` (the pre-existing out-of-scope edit); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
 - Sensitive scan: `./scripts/scan_sensitive.sh` exits 127 on macOS (`mapfile: command not found` under `/bin/bash` 3.2.57). Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py` (no repo-local `scripts/scan_sensitive_fallback.py` exists): `No obvious secrets or local path leaks found in 377 tracked/unignored files.` (exit 0). An extra pattern grep for API-key/token/local-path shapes on all new and edited docs returned no matches.
+- `AGENTS.md`: left unmodified and unstaged by this run.
+
+## Daily Sync — 2026-11-20
+
+- Run date: `2026-11-20`
+- Previous target: `4cccf3b8daf992227a6c9019ffbce5f7a2844280`; new upstream target: `fe4a2cd3dd308e8de929621e64e7f284d7a124d7`.
+- Commit range analysed: `4cccf3b8daf992227a6c9019ffbce5f7a2844280..fe4a2cd3dd308e8de929621e64e7f284d7a124d7` (`7` commits total: `5` non-merge, `2` merge).
+- Upstream net diff in range: `4` new files only, `+2564` lines — `agent-workspace/domain-skills/{endoflife-date,epss,fdic-bankfind,nyc-open-data}/scraping.md`. No Python runtime, packaging, installer, or test file changed.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `e45d423` | `domain-skills: add nyc-open-data, fdic-bankfind, epss, endoflife-date` | domains | Migrated to `domains/<site>/skill.md` (folded with the review fixes below) |
+| `bbb59a3` | `domain-skills: address review on nyc-open-data, fdic-bankfind, epss, endoflife-date` | domains | Folded into final per-site content |
+| `1915c6d` | `Merge pull request #1048 from browser-use/domain-skills/aeo-2026-11-18` | merge | Carries `e45d423`, `bbb59a3` |
+| `02f9166` | `domain-skills: fdic-bankfind empty date range, epss stable cache key` | domains | Folded into final per-site content |
+| `29f3274` | `domain-skills: nyc-open-data, fdic-bankfind, epss, endoflife-date fixes` | domains | Folded into final per-site content |
+| `4793f69` | `domain-skills: fdic-bankfind ambiguity shows the full match count; nyc-open-data and epss fixes` | domains | Folded into final per-site content |
+| `fe4a2cd` | `Merge pull request #1049 from browser-use/skills-web808-fixes` | merge | Final upstream `main` head; carries `4793f69` |
+
+### Mapping Decisions
+
+| Upstream path | Destination | Decision |
+| --- | --- | --- |
+| `agent-workspace/domain-skills/endoflife-date/scraping.md` | `domains/endoflife-date/skill.md` + legacy mirror `agent-workspace/domain-skills/endoflife-date/scraping.md` | Migrated |
+| `agent-workspace/domain-skills/epss/scraping.md` | `domains/epss/skill.md` + legacy mirror `agent-workspace/domain-skills/epss/scraping.md` | Migrated |
+| `agent-workspace/domain-skills/fdic-bankfind/scraping.md` | `domains/fdic-bankfind/skill.md` + legacy mirror `agent-workspace/domain-skills/fdic-bankfind/scraping.md` | Migrated |
+| `agent-workspace/domain-skills/nyc-open-data/scraping.md` | `domains/nyc-open-data/skill.md` + legacy mirror `agent-workspace/domain-skills/nyc-open-data/scraping.md` | Migrated |
+| — | `domains/README.md` | Added the 4 sites to the legacy-mirror list and the synced-skills table (alphabetical) |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | — | Unchanged; the upstream range is domain knowledge only |
+
+- Per-site notes carried in from the review/fix commits: `fdic-bankfind` keeps the empty-date-range handling and the ambiguity behavior that prints the full match count before narrowing; `epss` keeps the stable on-disk cache key (expiry pinned before 14:00 UTC, second run makes no network calls) and treats an all-unscored batch as a normal answer; `nyc-open-data` keeps the SoQL type-mismatch notes; `endoflife-date` documents the cycle/product lookup and unsupported-version answers as final.
+- Normalization for every domain-skill file (both paths): `^```python$` fences become `^```text$` and trailing whitespace is stripped; content otherwise identical to `upstream/main`. `domains/<site>/skill.md` and its legacy mirror are byte-identical to each other for all 4 sites.
+
+### Verification Evidence
+
+- Pre-run: `HEAD` == `origin/main` == `1573f0f9bcb7c80be11fb44cc1cf3a901d205935`; `upstream/main` == `fe4a2cd3dd308e8de929621e64e7f284d7a124d7`; `git status --short` showed ` M AGENTS.md` (pre-existing, intentionally untouched) plus the files created by this run.
+- `cargo fmt --all --manifest-path rust/Cargo.toml --check`: passed (exit 0).
+- `cargo test --workspace --manifest-path rust/Cargo.toml`: passed — `211 passed`, `0 failed` (exit 0).
+- `cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0).
+- CLI smoke on built binaries (`rust/target/debug/*`):
+  - `browser-harness --help`: exit 0 (admin/runner routing usage printed).
+  - `browser-harness summary`: exit 0 (`execution_model=PersistentRunner ... operations=42`); `bhrun summary`: exit 0 (same output).
+  - `browser-harness doctor`: exit 0 (`{"daemon":{"alive":false,"browserKind":"local","name":"default"},"healthy":false,"schemaVersion":1}`).
+- `git diff --check`: reports only `AGENTS.md:344: new blank line at EOF` (pre-existing out-of-scope edit); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
+- Sensitive scan: `scripts/scan_sensitive.sh` cannot run here (it exits with `scan_sensitive.sh requires ripgrep (rg)`; `rg` is not on `PATH` in this shell). Substituted the skill-provided fallback `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: `No obvious secrets or local path leaks found in 385 tracked/unignored files.` (exit 0). No repo-local `scripts/scan_sensitive_fallback.py` exists.
 - `AGENTS.md`: left unmodified and unstaged by this run.
