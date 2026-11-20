@@ -4,8 +4,8 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `fe4a2cd3dd308e8de929621e64e7f284d7a124d7`
-- Commit range: `4cccf3b8daf992227a6c9019ffbce5f7a2844280..fe4a2cd3dd308e8de929621e64e7f284d7a124d7`
+- Upstream target commit: `22ecf8545d67c474fa024643632d70af28b7fa0e`
+- Commit range: `fe4a2cd3dd308e8de929621e64e7f284d7a124d7..22ecf8545d67c474fa024643632d70af28b7fa0e`
 - Count: 7 commits (5 non-merge, 2 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
@@ -1344,3 +1344,60 @@
 - `git diff --check`: reports only `AGENTS.md:344: new blank line at EOF` (pre-existing out-of-scope edit); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
 - Sensitive scan: `scripts/scan_sensitive.sh` cannot run here (it exits with `scan_sensitive.sh requires ripgrep (rg)`; `rg` is not on `PATH` in this shell). Substituted the skill-provided fallback `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: `No obvious secrets or local path leaks found in 385 tracked/unignored files.` (exit 0). No repo-local `scripts/scan_sensitive_fallback.py` exists.
 - `AGENTS.md`: left unmodified and unstaged by this run.
+
+## Daily Sync — 2026-11-21
+
+- Run date: `2026-11-21`
+- Previous target: `fe4a2cd3dd308e8de929621e64e7f284d7a124d7`; new upstream target: `22ecf8545d67c474fa024643632d70af28b7fa0e`.
+- Commit range analysed: `fe4a2cd3dd308e8de929621e64e7f284d7a124d7..22ecf8545d67c474fa024643632d70af28b7fa0e` (`7` commits total: `5` non-merge, `2` merge).
+- Upstream net diff in range: `4` new files only, `+2564` lines — `agent-workspace/domain-skills/{cisa-kev,cleveland-museum,library-of-congress,noaa-space-weather}/scraping.md`. The Python runtime, packaging, installer, and test surfaces are unchanged.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `bf6614f` | `domain-skills: add noaa-space-weather, cisa-kev, cleveland-museum, library-of-congress` | domains | Migrated all four sites to `domains/<site>/skill.md` and legacy mirrors, folded with the review fixes below |
+| `00ac3ec` | `domain-skills: address review on noaa-space-weather, cisa-kev, cleveland-museum, library-of-congress` | domains | Folded into final per-site content |
+| `9cf3ae6` | `domain-skills: cleveland-museum credit rows dated, cisa-kev block 4 output from the UTC re-run` | domains | Folded into final per-site content |
+| `44d473a` | `Merge pull request #1051 from browser-use/domain-skills/aeo-2026-11-19` | merge | Carries `bf6614f`, `00ac3ec`, and `9cf3ae6` |
+| `4d24584` | `domain-skills: noaa-space-weather and library-of-congress fixes from website#815 review` | domains | Folded into final per-site content |
+| `a00d9a2` | `domain-skills: library-of-congress header probe checks the final status` | domains | Folded into final per-site content |
+| `22ecf85` | `Merge pull request #1052 from browser-use/domain-skills/aeo-2026-11-19-fixes` | merge | Final upstream `main` head; carries `4d24584` and `a00d9a2` |
+
+### Mapping Decisions
+
+| Upstream path | Destination | Decision |
+| --- | --- | --- |
+| `agent-workspace/domain-skills/cisa-kev/scraping.md` | `domains/cisa-kev/skill.md` + legacy mirror `agent-workspace/domain-skills/cisa-kev/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/cleveland-museum/scraping.md` | `domains/cleveland-museum/skill.md` + legacy mirror `agent-workspace/domain-skills/cleveland-museum/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/library-of-congress/scraping.md` | `domains/library-of-congress/skill.md` + legacy mirror `agent-workspace/domain-skills/library-of-congress/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/noaa-space-weather/scraping.md` | `domains/noaa-space-weather/skill.md` + legacy mirror `agent-workspace/domain-skills/noaa-space-weather/scraping.md` | Migrated from final `upstream/main` content |
+| — | `domains/README.md` | Added the four sites to the legacy-mirror prose and the alphabetical synced-skills table |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | — | Unchanged; the upstream range is domain knowledge only |
+
+- Normalization for every domain-skill file (both paths): `^```python$` fences become `^```text$`, and trailing whitespace is stripped. Every other byte matches final `upstream/main`. Each `domains/<site>/skill.md` is byte-identical to its legacy mirror.
+
+### Per-Site Notes
+
+- `cisa-kev`: final content includes the UTC-based 7-day window in block 4, the `434-2947 s` cache-control range from the 2026-11-20 re-run, the 14-day/vendor examples, and the feed/schema/robots caveats.
+- `cleveland-museum`: final content pages creator matches up to 500 and reports `PARTIAL`, keeps earlier `credits.csv` rows, and records `checked_utc` for each license read.
+- `library-of-congress`: final content UTF-8 percent-encodes topics, writes a header-only CSV for an empty topic, counts robots.txt in the request total, stops at the first error, prints the advisory and collection rights together, and validates curl's final header-probe status.
+- `noaa-space-weather`: final content prints `unavailable` when a file has no `Last-Modified`, returns `NOT KNOWN YET` for a forecast that stops before the end of tonight, uses the issue date's year for late-December forecasts, and skips future `estimated` Kp slots.
+
+### Verification Evidence
+
+- Pre-run: `HEAD` == `origin/main` == `5483eb7708556807216d407d4d0a9497b2c86e4f`; `upstream/main` == `22ecf8545d67c474fa024643632d70af28b7fa0e`; `git status --short --branch` showed only ` M AGENTS.md`, the pre-existing out-of-scope edit.
+- Remote ancestry: `git merge-base --is-ancestor origin/main HEAD` passed before migration.
+- Upstream analysis: `git rev-list --count fe4a2cd..upstream/main` returned `7`; `git diff --name-status` listed four additions under `agent-workspace/domain-skills/`; no Rust files appeared in the range diff.
+- Fidelity: for all four sites, normalized `git show upstream/main:agent-workspace/domain-skills/<site>/scraping.md` matched `domains/<site>/skill.md`; `diff domains/<site>/skill.md agent-workspace/domain-skills/<site>/scraping.md` was empty; zero residual `^```python$` fences and zero trailing-whitespace matches remained.
+- `cargo fmt --all --manifest-path rust/Cargo.toml -- --check`: passed (exit 0).
+- Initial bare `cargo test --workspace --manifest-path rust/Cargo.toml` failed at link time because leaked `CFLAGS`/`CC` produced ring objects with unresolved UBSan symbols. Rerunning with `env -u CFLAGS -u CC cargo test --workspace --manifest-path rust/Cargo.toml` passed (exit 0) with `211 passed`, `0 failed` across the workspace test binaries.
+- `env -u CFLAGS -u CC cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0); finished in `0.69s`.
+- CLI smoke on built binaries (`rust/target/debug/*`):
+  - `browser-harness --help`: exit 0 (admin and runner command surface printed).
+  - `browser-harness summary`: exit 0 (`execution_model=PersistentRunner ... operations=42`).
+  - `bhrun summary`: exit 0 (same summary output).
+  - `browser-harness doctor`: exit 0 (`{"daemon":{"alive":false,"browserKind":"local","name":"default"},"healthy":false,"schemaVersion":1}`).
+- `git diff --check`: reported only `AGENTS.md:344: new blank line at EOF.` (exit 2, pre-existing); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
+- Sensitive scan: `./scripts/scan_sensitive.sh` exited `127` with `mapfile: command not found` under macOS `/bin/bash` 3.2. Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: `No obvious secrets or local path leaks found in 393 tracked/unignored files.` (exit 0).
+- `AGENTS.md`: left unmodified, unstaged, and unstashed by this run.

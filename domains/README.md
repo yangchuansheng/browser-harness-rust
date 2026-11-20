@@ -28,7 +28,9 @@ Rules:
   `energi-data-service`, `faa-nas-status`, `gleif`, `icd-10-cm`,
   `npi-registry`, `osv`, and `rxnorm`, plus `cpsc-recalls`, `medlineplus`,
   `openfema`, and `usgs-elevation`, plus `endoflife-date`, `epss`,
-  `fdic-bankfind`, and `nyc-open-data`) also keep verbatim mirrors at
+  `fdic-bankfind`, and `nyc-open-data`, plus `cisa-kev`,
+  `cleveland-museum`, `library-of-congress`, and `noaa-space-weather`) also
+  keep verbatim mirrors at
   `agent-workspace/domain-skills/<site>/scraping.md`.
 - Extra notes can live beside `skill.md` for task-specific flows.
 - Executable Rust guests still live under [`../rust/guests/`](../rust/guests/)
@@ -49,6 +51,8 @@ find domains -maxdepth 1 -type d | sort
 | Site | Capability |
 |------|------------|
 | `census-geocoder` | Geocode U.S. addresses and coordinates to county, census tract, block, and congressional-district layers. |
+| `cisa-kev` | Query the CISA KEV JSON feed for recent or vendor CVEs with due dates, required actions, and ransomware use. |
+| `cleveland-museum` | Find CC0 artworks by artist or keyword with metadata, credit lines, and downloadable web/print images. |
 | `cpsc-recalls` | Check whether a product has a U.S. CPSC recall, with recall number, date, hazard, units, and remedy. |
 | `endoflife-date` | Check whether a software version is still supported and when it reaches end of life via the endoflife.date API. |
 | `energi-data-service` | Query Danish DK1/DK2 day-ahead electricity prices and find the cheapest appliance windows. |
@@ -57,7 +61,9 @@ find domains -maxdepth 1 -type d | sort
 | `fdic-bankfind` | Check whether a bank is open and FDIC-insured, get its CERT number, assets and branches, or list recent bank failures. |
 | `gleif` | Find legal entities by name, inspect LEI status and registration data, and list reported direct subsidiaries. |
 | `icd-10-cm` | Resolve condition descriptions to ICD-10-CM codes or look up a code's official name via NLM CTSS. |
+| `library-of-congress` | Search digitized photos and maps by topic with titles, dates, image URLs, and rights notes via the JSON API. |
 | `medlineplus` | Get the plain-language MedlinePlus health-topic summary and page link for a condition. |
+| `noaa-space-weather` | Check current geomagnetic, solar radiation, and radio blackout levels, Kp forecasts, and active space-weather alerts. |
 | `npi-registry` | Verify U.S. clinicians and organizations by NPI, including taxonomy, practice address, and reported state licence. |
 | `nyc-open-data` | Get a NYC restaurant's latest health inspection score, grade and violations, or the latest 311 complaints for a ZIP code. |
 | `openfema` | List FEMA disaster declarations for a U.S. county or state, with incident type and declared assistance programs. |
