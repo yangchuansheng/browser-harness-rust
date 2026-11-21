@@ -29,8 +29,9 @@ Rules:
   `npi-registry`, `osv`, and `rxnorm`, plus `cpsc-recalls`, `medlineplus`,
   `openfema`, and `usgs-elevation`, plus `endoflife-date`, `epss`,
   `fdic-bankfind`, and `nyc-open-data`, plus `cisa-kev`,
-  `cleveland-museum`, `library-of-congress`, and `noaa-space-weather`) also
-  keep verbatim mirrors at
+  `cleveland-museum`, `library-of-congress`, and `noaa-space-weather`, plus
+  `crates-io`, `data-gov-sg`, `rubygems`, and `statistics-norway`) also keep
+  verbatim mirrors at
   `agent-workspace/domain-skills/<site>/scraping.md`.
 - Extra notes can live beside `skill.md` for task-specific flows.
 - Executable Rust guests still live under [`../rust/guests/`](../rust/guests/)
@@ -54,6 +55,8 @@ find domains -maxdepth 1 -type d | sort
 | `cisa-kev` | Query the CISA KEV JSON feed for recent or vendor CVEs with due dates, required actions, and ransomware use. |
 | `cleveland-museum` | Find CC0 artworks by artist or keyword with metadata, credit lines, and downloadable web/print images. |
 | `cpsc-recalls` | Check whether a product has a U.S. CPSC recall, with recall number, date, hazard, units, and remedy. |
+| `crates-io` | Look up a Rust crate's latest stable version, downloads, repository and dependents, or search crates by downloads. |
+| `data-gov-sg` | Get Singapore town forecasts, nearest temperature and rainfall readings, and regional PSI and PM2.5. |
 | `endoflife-date` | Check whether a software version is still supported and when it reaches end of life via the endoflife.date API. |
 | `energi-data-service` | Query Danish DK1/DK2 day-ahead electricity prices and find the cheapest appliance windows. |
 | `epss` | Get the exploitation probability and percentile for a list of CVEs to decide which to patch first via the FIRST API. |
@@ -68,7 +71,9 @@ find domains -maxdepth 1 -type d | sort
 | `nyc-open-data` | Get a NYC restaurant's latest health inspection score, grade and violations, or the latest 311 complaints for a ZIP code. |
 | `openfema` | List FEMA disaster declarations for a U.S. county or state, with incident type and declared assistance programs. |
 | `osv` | Check pinned dependency versions for known vulnerabilities, aliases, severity, and fixed versions. |
+| `rubygems` | Look up Ruby gem versions, downloads, licences and source links, list dependents, or search gems. |
 | `rxnorm` | Normalize drug names to RxCUI concepts and list brands, clinical drugs, strengths, and dose forms. |
+| `statistics-norway` | Search SSB tables, inspect their variables, and pull the latest official population, CPI or unemployment figures. |
 | `usgs-elevation` | Look up ground elevation for a latitude/longitude point via the USGS Elevation Point Query Service. |
 
 When adding or updating a site, prefer `domains/<site>/` (plus a verbatim

@@ -4,8 +4,8 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `22ecf8545d67c474fa024643632d70af28b7fa0e`
-- Commit range: `fe4a2cd3dd308e8de929621e64e7f284d7a124d7..22ecf8545d67c474fa024643632d70af28b7fa0e`
+- Upstream target commit: `5bd1128b61bdfe462ba6ae587402b189996823ca`
+- Commit range: `22ecf8545d67c474fa024643632d70af28b7fa0e..5bd1128b61bdfe462ba6ae587402b189996823ca`
 - Count: 7 commits (5 non-merge, 2 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
@@ -1344,6 +1344,57 @@
 - `git diff --check`: reports only `AGENTS.md:344: new blank line at EOF` (pre-existing out-of-scope edit); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
 - Sensitive scan: `scripts/scan_sensitive.sh` cannot run here (it exits with `scan_sensitive.sh requires ripgrep (rg)`; `rg` is not on `PATH` in this shell). Substituted the skill-provided fallback `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: `No obvious secrets or local path leaks found in 385 tracked/unignored files.` (exit 0). No repo-local `scripts/scan_sensitive_fallback.py` exists.
 - `AGENTS.md`: left unmodified and unstaged by this run.
+
+## Daily Sync — 2026-11-22
+
+- Run date: `2026-11-22`
+- Previous target: `22ecf8545d67c474fa024643632d70af28b7fa0e`; new upstream target: `5bd1128b61bdfe462ba6ae587402b189996823ca`.
+- Commit range analysed: `22ecf8545d67c474fa024643632d70af28b7fa0e..5bd1128b61bdfe462ba6ae587402b189996823ca` (`7` commits total: `5` non-merge, `2` merge).
+- Upstream net diff in range: `4` new files only, `+2807` lines — `agent-workspace/domain-skills/{crates-io,data-gov-sg,rubygems,statistics-norway}/scraping.md`. The Rust runtime, Python runtime, packaging, installer, and test surfaces are unchanged.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `203349a` | `domain-skills: add crates-io, statistics-norway, data-gov-sg, rubygems` | domains | Migrated all four sites to `domains/<site>/skill.md` and legacy mirrors, folded with the review fixes below |
+| `86d061a` | `domain-skills: address review on crates-io, statistics-norway, data-gov-sg, rubygems` | domains | Folded into final per-site content |
+| `d6f6f3f` | `Merge pull request #1057 from browser-use/domain-skills/aeo-2026-11-20` | merge | Carries `203349a` and `86d061a` |
+| `e4a6be0` | `domain-skills: statistics-norway and data-gov-sg retry wording matches the code` | domains | Folded into final per-site content |
+| `296b0d8` | `domain-skills: crates-io and statistics-norway fixes from website#823 review` | domains | Folded into final per-site content |
+| `635eb8d` | `domain-skills: statistics-norway call count covers extra search pages` | domains | Folded into final per-site content |
+| `5bd1128b` | `Merge pull request #1058 from browser-use/domain-skills/aeo-2026-11-20-w1` | merge | Final upstream `main` head; carries `296b0d8` and `635eb8d` |
+
+### Mapping Decisions
+
+| Upstream path | Destination | Decision |
+| --- | --- | --- |
+| `agent-workspace/domain-skills/crates-io/scraping.md` | `domains/crates-io/skill.md` + legacy mirror `agent-workspace/domain-skills/crates-io/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/data-gov-sg/scraping.md` | `domains/data-gov-sg/skill.md` + legacy mirror `agent-workspace/domain-skills/data-gov-sg/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/rubygems/scraping.md` | `domains/rubygems/skill.md` + legacy mirror `agent-workspace/domain-skills/rubygems/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/statistics-norway/scraping.md` | `domains/statistics-norway/skill.md` + legacy mirror `agent-workspace/domain-skills/statistics-norway/scraping.md` | Migrated from final `upstream/main` content |
+| — | `domains/README.md` | Added the four sites to the legacy-mirror prose and the alphabetical synced-skills table |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | — | Unchanged; the upstream range is domain knowledge only |
+
+- Normalization for every domain-skill file (both paths): trailing whitespace is stripped. The canonical `domains/<site>/skill.md` also converts `^```python$` fences to `^```text$`. Every other byte matches final `upstream/main`; each canonical file is the mirror with that fence substitution.
+
+### Per-Site Notes
+
+- `crates-io`: final content pages versions until a stable release appears, implements Cargo caret upper bounds for one- and two-part requirements, skips requirements that need a full parser, reads `Retry-After` as seconds or an HTTP date, and stops above 120 s. It keeps the API rate limit at 1 request/second with an identifying User-Agent and documents the sparse-index and database-dump alternatives.
+- `data-gov-sg`: final content separates the PSI and PM2.5 observation hours, percent-encodes pagination tokens, prints the Singapore Open Data Licence attribution line, and documents the 6-calls-per-10-seconds limit. Blocks 1 and 3 retry once; block 1 uses 10 s because CORS hides `Retry-After`; block 4's curl retries once; block 2 never retries.
+- `rubygems`: final content reads `Retry-After` as seconds or an HTTP date and stops above 120 s in browser and Python paths. It keeps the 10 requests/second API limit, distinguishes runtime from development dependents, and uses the allowed JSON search endpoint.
+- `statistics-norway`: final content pages through 40-hit search results until a table matches, adds one request per extra page, skips the population sum when a cell is null, and reads `Retry-After` as seconds or an HTTP date. It keeps the 30-queries-per-minute and 800,000-cell limits plus the 05:00 and 11:30 metadata-update caveats.
+
+### Verification Evidence
+
+- Pre-run: `HEAD` == `origin/main` == `afa836d2786733d459f6405743d32be89ff5c3b6`; `upstream/main` == `5bd1128b61bdfe462ba6ae587402b189996823ca`; `git status --short` showed only ` M AGENTS.md`, the pre-existing out-of-scope edit.
+- Upstream analysis: `git rev-list --count 22ecf85..5bd1128` returned `7`; `git rev-list --count --no-merges 22ecf85..5bd1128` returned `5`; `git diff --name-status` listed four additions under `agent-workspace/domain-skills/`; no Rust or Python source appeared in the range diff.
+- Fidelity: for all four sites, normalized upstream content matched `domains/<site>/skill.md`; whitespace-normalized upstream content matched the legacy mirror; zero trailing-whitespace matches and zero Python fences remained in canonical files.
+- `cargo fmt --all --manifest-path rust/Cargo.toml --check`: passed (exit 0).
+- Bare `cargo test --workspace --manifest-path rust/Cargo.toml`: failed at link time because inherited `CFLAGS`/`CC` built `ring` with UBSan references. `env -u CFLAGS -u CC cargo test --workspace --manifest-path rust/Cargo.toml`: passed (exit 0) with `211 passed`, `0 failed`.
+- CLI smoke: `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help` passed and printed the admin/runner command surface; `browser-harness summary` passed with `execution_model=PersistentRunner ... operations=42`.
+- `git diff --check`: reports only `AGENTS.md:344: new blank line at EOF` from the pre-existing edit (exit 2); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
+- Sensitive scan: `./scripts/scan_sensitive.sh` exited `127` with `mapfile: command not found` under macOS Bash 3.2. No repo-local fallback exists, so the script's exact regex set was run through Python over `git ls-files --cached --others --exclude-standard`: `No obvious secrets or local path leaks found in 401 tracked/unignored files.` (exit 0).
+- `AGENTS.md`: left unmodified, unstaged, and unstashed by this run.
 
 ## Daily Sync — 2026-11-21
 
