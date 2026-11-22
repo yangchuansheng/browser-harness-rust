@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `5bd1128b61bdfe462ba6ae587402b189996823ca`
-- Commit range: `22ecf8545d67c474fa024643632d70af28b7fa0e..5bd1128b61bdfe462ba6ae587402b189996823ca`
-- Count: 7 commits (5 non-merge, 2 merge)
+- Upstream target commit: `797f2d05e30e58b217ff621a99d302d712dc38da`
+- Commit range: `5bd1128b61bdfe462ba6ae587402b189996823ca..797f2d05e30e58b217ff621a99d302d712dc38da`
+- Count: 6 commits (4 non-merge, 2 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -1344,6 +1344,50 @@
 - `git diff --check`: reports only `AGENTS.md:344: new blank line at EOF` (pre-existing out-of-scope edit); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
 - Sensitive scan: `scripts/scan_sensitive.sh` cannot run here (it exits with `scan_sensitive.sh requires ripgrep (rg)`; `rg` is not on `PATH` in this shell). Substituted the skill-provided fallback `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: `No obvious secrets or local path leaks found in 385 tracked/unignored files.` (exit 0). No repo-local `scripts/scan_sensitive_fallback.py` exists.
 - `AGENTS.md`: left unmodified and unstaged by this run.
+
+## Daily Sync — 2026-11-23
+
+- Run date: `2026-11-23`
+- Previous target: `5bd1128b61bdfe462ba6ae587402b189996823ca`; new upstream target: `797f2d05e30e58b217ff621a99d302d712dc38da`.
+- Commit range analysed: `5bd1128b61bdfe462ba6ae587402b189996823ca..797f2d05e30e58b217ff621a99d302d712dc38da` (`6` commits total: `4` non-merge, `2` merge).
+- Upstream net diff in range: `4` new files only, `+3077` lines — `agent-workspace/domain-skills/{entur,geo-admin-ch,smhi,ted-tenders}/scraping.md`. The Rust runtime, Python runtime, packaging, installer, and test surfaces are unchanged.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `56af71d` | `domain-skills: add ted-tenders, smhi, entur, geo-admin-ch` | domains | Migrated all four sites to `domains/<site>/skill.md` and legacy mirrors |
+| `80a5f7b` | `domain-skills: address review on ted-tenders, smhi, entur, geo-admin-ch` | domains | Folded into final per-site content |
+| `f38dba1` | `Merge pull request #1060 from browser-use/skills/aeo-2026-11-21` | merge | Carries `56af71d` and `80a5f7b` |
+| `35df4b5` | `domain-skills: 5 fixes from website#827 review` | domains | Folded into final per-site content |
+| `72a27bb` | `domain-skills: smhi missing precipitation type does not vote` | domains | Folded into final per-site content |
+| `797f2d0` | `Merge pull request #1061 from browser-use/domain-skills/aeo-2026-11-21-w1` | merge | Final upstream `main` head; carries `35df4b5` and `72a27bb` |
+
+### Mapping Decisions
+
+| Upstream path | Destination | Decision |
+| --- | --- | --- |
+| `agent-workspace/domain-skills/entur/scraping.md` | `domains/entur/skill.md` + legacy mirror `agent-workspace/domain-skills/entur/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/geo-admin-ch/scraping.md` | `domains/geo-admin-ch/skill.md` + legacy mirror `agent-workspace/domain-skills/geo-admin-ch/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/smhi/scraping.md` | `domains/smhi/skill.md` + legacy mirror `agent-workspace/domain-skills/smhi/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/ted-tenders/scraping.md` | `domains/ted-tenders/skill.md` + legacy mirror `agent-workspace/domain-skills/ted-tenders/scraping.md` | Migrated from final `upstream/main` content |
+| — | `domains/README.md` | Added the four sites to the legacy-mirror prose and the alphabetical synced-skills table |
+
+- Normalization: trailing whitespace stripped in every file; canonical `domains/<site>/skill.md` also converts `^```python$` to `^```text$`. Every other byte matches final `upstream/main`; each canonical file equals its mirror with the fence substitution allowed.
+
+### Verification Evidence
+
+- Pre-run: `git status --short` returned only ` M AGENTS.md`, the pre-existing out-of-scope edit.
+- Upstream analysis: `git rev-list --count 5bd1128..797f2d0` returned `6`; `git rev-list --count --no-merges 5bd1128..797f2d0` returned `4`; `git rev-list --count --merges 5bd1128..797f2d0` returned `2`. `git diff --name-status 5bd1128..797f2d0` listed four `A` entries under `agent-workspace/domain-skills/`; `git diff --stat` reported `4 files changed, 3077 insertions(+)`.
+- Fidelity: for each site, `diff -q` between normalized `upstream/main` content and the legacy mirror returned exit `0`; `diff -q` between the mirror with `^```python$` replaced by `^```text$` and the canonical skill returned exit `0`. Line counts were `entur=797`, `geo-admin-ch=657`, `smhi=876`, and `ted-tenders=747`; canonical files had zero `^```python$` fences and no trailing whitespace.
+- README: the four rows were inserted at the requested positions with the supplied text, and the legacy-mirror prose includes the added `plus` clause.
+- `cargo fmt --all --manifest-path rust/Cargo.toml --check`: passed (exit `0`).
+- Bare `cargo test --workspace --manifest-path rust/Cargo.toml`: failed (exit `101`) at link time with undefined `___ubsan_*` symbols from `ring`. `env -u CFLAGS -u CC cargo test --workspace --manifest-path rust/Cargo.toml`: passed (exit `0`); all workspace suites reported `ok`, for `211` passed and `0` failed.
+- `git diff --check`: exit `2` with `AGENTS.md:344: new blank line at EOF.` from the pre-existing edit. `git diff --check -- . ':(exclude)AGENTS.md'`: passed (exit `0`).
+- Sensitive scan: `./scripts/scan_sensitive.sh` exited `127` with `./scripts/scan_sensitive.sh: line 12: mapfile: command not found` under macOS Bash 3.2. The fallback `python3 "$HOME/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py"` exited `0` with `No obvious secrets or local path leaks found in 409 tracked/unignored files.`
+- Bare `cargo build --workspace --manifest-path rust/Cargo.toml`: failed (exit `101`) with the same `ring` UBSan link error. `env -u CFLAGS -u CC cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit `0`) and finished the dev profile.
+- CLI smoke: the repository has no `./target/debug` directory; binaries are under `rust/target/debug`. `./rust/target/debug/browser-harness --help 2>&1` exited `0` and printed the admin/runner routing surface. `./rust/target/debug/bhrun --help 2>&1` printed the full runner command surface and exited `1` with `unsupported bhrun command`, matching the unchanged runtime behavior.
+- `AGENTS.md`: unmodified, unstaged, and untouched by this run.
 
 ## Daily Sync — 2026-11-22
 

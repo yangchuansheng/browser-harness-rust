@@ -30,9 +30,9 @@ Rules:
   `openfema`, and `usgs-elevation`, plus `endoflife-date`, `epss`,
   `fdic-bankfind`, and `nyc-open-data`, plus `cisa-kev`,
   `cleveland-museum`, `library-of-congress`, and `noaa-space-weather`, plus
-  `crates-io`, `data-gov-sg`, `rubygems`, and `statistics-norway`) also keep
-  verbatim mirrors at
-  `agent-workspace/domain-skills/<site>/scraping.md`.
+  `crates-io`, `data-gov-sg`, `rubygems`, and `statistics-norway`, plus
+  `entur`, `geo-admin-ch`, `smhi`, and `ted-tenders`) also keep verbatim
+  mirrors at `agent-workspace/domain-skills/<site>/scraping.md`.
 - Extra notes can live beside `skill.md` for task-specific flows.
 - Executable Rust guests still live under [`../rust/guests/`](../rust/guests/)
   unless a site explicitly grows its own guest package.
@@ -59,10 +59,12 @@ find domains -maxdepth 1 -type d | sort
 | `data-gov-sg` | Get Singapore town forecasts, nearest temperature and rainfall readings, and regional PSI and PM2.5. |
 | `endoflife-date` | Check whether a software version is still supported and when it reaches end of life via the endoflife.date API. |
 | `energi-data-service` | Query Danish DK1/DK2 day-ahead electricity prices and find the cheapest appliance windows. |
+| `entur` | Get next departures (line, destination, expected time, delay, platform) from a Norwegian stop by name, or plan a trip between two places. |
 | `epss` | Get the exploitation probability and percentile for a list of CVEs to decide which to patch first via the FIRST API. |
 | `faa-nas-status` | Check U.S. airports for active ground stops, ground-delay programs, closures, reasons, and delays in the FAA XML feed. |
 | `fdic-bankfind` | Check whether a bank is open and FDIC-insured, get its CERT number, assets and branches, or list recent bank failures. |
 | `gleif` | Find legal entities by name, inspect LEI status and registration data, and list reported direct subsidiaries. |
+| `geo-admin-ch` | Geocode a Swiss address or place name to WGS84 and LV95 coordinates, get its elevation, commune, and a terrain profile. |
 | `icd-10-cm` | Resolve condition descriptions to ICD-10-CM codes or look up a code's official name via NLM CTSS. |
 | `library-of-congress` | Search digitized photos and maps by topic with titles, dates, image URLs, and rights notes via the JSON API. |
 | `medlineplus` | Get the plain-language MedlinePlus health-topic summary and page link for a condition. |
@@ -73,7 +75,9 @@ find domains -maxdepth 1 -type d | sort
 | `osv` | Check pinned dependency versions for known vulnerabilities, aliases, severity, and fixed versions. |
 | `rubygems` | Look up Ruby gem versions, downloads, licences and source links, list dependents, or search gems. |
 | `rxnorm` | Normalize drug names to RxCUI concepts and list brands, clinical drugs, strengths, and dose forms. |
+| `smhi` | Get the next 48 hours of hourly temperature, wind and precipitation for a Swedish town by coordinates, plus active SMHI weather warnings. |
 | `statistics-norway` | Search SSB tables, inspect their variables, and pull the latest official population, CPI or unemployment figures. |
+| `ted-tenders` | Find open EU public tenders by keyword, CPV code or buyer country, with title, buyer, country, submission deadline and notice link. |
 | `usgs-elevation` | Look up ground elevation for a latitude/longitude point via the USGS Elevation Point Query Service. |
 
 When adding or updating a site, prefer `domains/<site>/` (plus a verbatim
