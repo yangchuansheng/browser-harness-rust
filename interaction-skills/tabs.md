@@ -36,7 +36,8 @@ JSON
 
 - `list-tabs`: enumerate page targets
 - `current-tab`: inspect the currently attached target
-- `new-tab`: create and attach to a background page target
+- `new-tab`: create and attach to a background page target; its JSON result
+  includes both `target_id` and the requested `url`
 - `close-tab`: close a specific target, or the current target when `target_id`
   is omitted
 - `switch-tab`: attach to a known target and move the horse marker; `activate`
@@ -59,6 +60,10 @@ JSON
 Named local/CDP daemons retain one dedicated background target. Stale-session
 recovery reuses the current target, shares concurrent replacements, and keeps
 delayed requests scoped to the session that replaced their exact stale session.
+
+Set `BH_IDLE_EXIT=1` with an optional positive `BH_IDLE_TIMEOUT` (seconds) for
+a daemon that should close after inactivity. The default timeout in this mode is
+30 minutes; ordinary daemons remain persistent.
 
 ## Local Verification
 

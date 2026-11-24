@@ -4,21 +4,24 @@ use std::io::{Cursor, ErrorKind, Read, Write};
 use std::os::fd::AsRawFd;
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::net::UnixStream;
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
+};
 use std::thread;
 use std::time::Duration;
 
 use bh_cdp::{is_browser_level_method, CdpClient, CdpEvent};
 use bh_discovery::{get_ws_url, inspect_marker, is_internal_url, runtime_paths, RuntimePaths};
 use bh_protocol::{
-    DaemonRequest, DaemonResponse, META_CLICK, META_CLOSE_TAB, META_CONFIGURE_DOWNLOADS,
-    META_CONNECTION_STATUS, META_CURRENT_TAB, META_DISPATCH_KEY, META_DRAIN_EVENTS,
-    META_ENSURE_REAL_TAB, META_GET_COOKIES, META_GOTO, META_HANDLE_DIALOG, META_IFRAME_TARGET,
-    META_JS, META_LIST_TABS, META_MOUSE_DOWN, META_MOUSE_MOVE, META_MOUSE_UP, META_NEW_TAB,
-    META_PAGE_INFO, META_PENDING_DIALOG, META_PING, META_PRESS_KEY, META_PRINT_PDF,
+    DaemonRequest, DaemonResponse, MAX_REQUEST_BYTES, META_CLICK, META_CLOSE_TAB,
+    META_CONFIGURE_DOWNLOADS, META_CONNECTION_STATUS, META_CURRENT_TAB, META_DISPATCH_KEY,
+    META_DRAIN_EVENTS, META_ENSURE_REAL_TAB, META_GET_COOKIES, META_GOTO, META_HANDLE_DIALOG,
+    META_IFRAME_TARGET, META_JS, META_LIST_TABS, META_MOUSE_DOWN, META_MOUSE_MOVE, META_MOUSE_UP,
+    META_NEW_TAB, META_PAGE_INFO, META_PENDING_DIALOG, META_PING, META_PRESS_KEY, META_PRINT_PDF,
     META_SCREENSHOT, META_SCROLL, META_SESSION, META_SET_COOKIES, META_SET_SESSION,
     META_SET_VIEWPORT, META_SHUTDOWN, META_SWITCH_TAB, META_TYPE_TEXT, META_UPLOAD_FILE,
-    META_WAIT_FOR_LOAD,
+    META_WAIT_FOR_LOAD, PROTOCOL_VERSION,
 };
 use bh_remote::BrowserUseClient;
 use serde_json::{json, Value};
@@ -160,6 +163,8 @@ struct Daemon {
     state: Arc<Mutex<DaemonState>>,
     session_state_lock: Arc<Mutex<()>>,
     shutdown_tx: watch::Sender<bool>,
+    active_requests: Arc<AtomicUsize>,
+    last_request: Arc<Mutex<Instant>>,
 }
 
 impl Daemon {
@@ -170,6 +175,8 @@ impl Daemon {
             state: Arc::new(Mutex::new(DaemonState::default())),
             session_state_lock: Arc::new(Mutex::new(())),
             shutdown_tx,
+            active_requests: Arc::new(AtomicUsize::new(0)),
+            last_request: Arc::new(Mutex::new(Instant::now())),
         }
     }
 
@@ -629,21 +636,30 @@ impl Daemon {
             return Ok(json!({ "dialog": dialog }));
         }
         let session_id = self.ensure_session().await?;
-        let result = self
-            .send_with_retry(
-                "Runtime.evaluate",
-                json!({
-                    "expression": "JSON.stringify({url:location.href,title:document.title,w:innerWidth,h:innerHeight,sx:scrollX,sy:scrollY,pw:document.documentElement.scrollWidth,ph:document.documentElement.scrollHeight})",
-                    "returnByValue": true
-                }),
-                Some(session_id),
-            )
-            .await?;
-        let value = result
-            .get("result")
-            .and_then(|result| result.get("value"))
-            .cloned()
-            .ok_or_else(|| "Runtime.evaluate missing result.value".to_string())?;
+        let deadline = Instant::now() + Duration::from_secs(5);
+        let value = loop {
+            let result = self
+                .send_with_retry(
+                    "Runtime.evaluate",
+                    json!({
+                        "expression": "document.documentElement ? JSON.stringify({url:location.href,title:document.title,w:innerWidth,h:innerHeight,sx:scrollX,sy:scrollY,pw:document.documentElement.scrollWidth,ph:document.documentElement.scrollHeight}) : null",
+                        "returnByValue": true
+                    }),
+                    Some(session_id.clone()),
+                )
+                .await?;
+            if let Some(value) = result
+                .get("result")
+                .and_then(|result| result.get("value"))
+                .cloned()
+            {
+                break value;
+            }
+            if Instant::now() >= deadline {
+                return Err("page_info timed out waiting for document <html>".to_string());
+            }
+            sleep(Duration::from_millis(50)).await;
+        };
         match value {
             Value::String(text) => serde_json::from_str::<Value>(&text)
                 .map_err(|err| format!("parse page info JSON: {err}")),
@@ -697,7 +713,7 @@ impl Daemon {
                             .map(|_| ())
                         };
                         if navigate_result.is_ok() {
-                            return Ok(Value::String(target_id));
+                            return Ok(json!({"target_id": target_id, "url": url}));
                         }
                     }
                 }
@@ -725,7 +741,7 @@ impl Daemon {
             self.wait_for_navigation_start_result("about:blank", 5.0)
                 .await?;
         }
-        Ok(Value::String(target_id))
+        Ok(json!({"target_id": target_id, "url": url}))
     }
 
     async fn close_tab_result(&self, target_id: Option<&str>) -> Result<Value, String> {
@@ -1392,7 +1408,7 @@ impl Daemon {
         match request.meta.as_deref() {
             Some(META_PING) => DaemonResponse {
                 result: Some(
-                    json!({"pong": true, "pid": std::process::id(), "browser_kind": self.config.browser_kind()}),
+                    json!({"pong": true, "pid": std::process::id(), "browser_kind": self.config.browser_kind(), "protocol": PROTOCOL_VERSION}),
                 ),
                 ..DaemonResponse::default()
             },
@@ -2507,6 +2523,8 @@ pub async fn serve(config: &DaemonConfig) -> Result<(), String> {
         ),
     );
 
+    let idle_timeout = idle_timeout();
+    let mut idle_tick = tokio::time::interval(Duration::from_secs(1));
     loop {
         tokio::select! {
             changed = shutdown_rx.changed() => {
@@ -2523,6 +2541,15 @@ pub async fn serve(config: &DaemonConfig) -> Result<(), String> {
                     }
                 });
             }
+            _ = idle_tick.tick(), if idle_timeout.is_some() => {
+                let timeout = idle_timeout.expect("guarded by select condition");
+                let inactive_for = daemon.last_request.lock().await.elapsed();
+                if daemon.active_requests.load(Ordering::Relaxed) == 0 && inactive_for >= timeout {
+                    log_line(config, &format!("no request for {}s (BH_IDLE_TIMEOUT); shutting down", timeout.as_secs_f64()));
+                    let _ = daemon.shutdown_tx.send(true);
+                    break;
+                }
+            }
         }
     }
 
@@ -2538,23 +2565,67 @@ async fn run_event_loop(daemon: Daemon, mut events_rx: mpsc::UnboundedReceiver<C
 async fn handle_stream(daemon: Daemon, stream: TokioUnixStream) -> Result<(), String> {
     let (read_half, mut write_half) = stream.into_split();
     let mut reader = BufReader::new(read_half);
-    let mut line = String::new();
+    let mut line = Vec::new();
     let bytes = reader
-        .read_line(&mut line)
+        .read_until(b'\n', &mut line)
         .await
         .map_err(|err| format!("read request: {err}"))?;
-    if bytes == 0 || line.trim().is_empty() {
+    if bytes == 0 || line.iter().all(u8::is_ascii_whitespace) {
         return Ok(());
     }
+    if line.len() > MAX_REQUEST_BYTES {
+        let payload = DaemonResponse {
+            error: Some(format!(
+                "IPC request is {:.1} MiB, over the {} MiB limit",
+                line.len() as f64 / (1 << 20) as f64,
+                MAX_REQUEST_BYTES >> 20
+            )),
+            ..DaemonResponse::default()
+        }
+        .to_json_line()?;
+        write_half
+            .write_all(payload.as_bytes())
+            .await
+            .map_err(|err| format!("write response: {err}"))?;
+        return Ok(());
+    }
+    let line = String::from_utf8(line).map_err(|err| format!("request was not utf-8: {err}"))?;
 
     let request = DaemonRequest::from_json_line(&line)?;
+    let is_health_check = request.meta.as_deref() == Some(META_PING);
+    if !is_health_check {
+        daemon.active_requests.fetch_add(1, Ordering::Relaxed);
+        *daemon.last_request.lock().await = Instant::now();
+    }
     let response = daemon.handle_request(request).await;
+    if !is_health_check {
+        daemon.active_requests.fetch_sub(1, Ordering::Relaxed);
+        *daemon.last_request.lock().await = Instant::now();
+    }
     let payload = response.to_json_line()?;
     write_half
         .write_all(payload.as_bytes())
         .await
         .map_err(|err| format!("write response: {err}"))?;
     Ok(())
+}
+
+fn idle_timeout() -> Option<Duration> {
+    let enabled = std::env::var("BH_IDLE_EXIT").ok().is_some_and(|value| {
+        matches!(
+            value.trim().to_ascii_lowercase().as_str(),
+            "1" | "true" | "yes" | "on"
+        )
+    });
+    if !enabled {
+        return None;
+    }
+    let seconds = std::env::var("BH_IDLE_TIMEOUT")
+        .ok()
+        .and_then(|value| value.parse::<f64>().ok())
+        .filter(|value| value.is_finite() && *value > 0.0)
+        .unwrap_or(1800.0);
+    Some(Duration::from_secs_f64(seconds))
 }
 
 fn create_target_params(url: &str) -> Value {

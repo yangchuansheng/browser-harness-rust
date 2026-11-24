@@ -49,6 +49,9 @@ JSON
 cargo run --quiet --bin bhrun -- http-get <<'JSON'
 {"url":"https://open.spotify.com/oembed?url=https://open.spotify.com/track/4PTG3Z6ehGkBFwjybzWkR8","timeout":20.0}
 JSON
+
+`http-get` emits a JSON string for UTF-8 bodies and a JSON byte array for binary
+bodies. Requests remain local, so localhost and private endpoints stay usable.
 cat <<'NDJSON' | cargo run --quiet --bin bhrun -- serve-guest guests/persistent_counter.wat
 {"command":"start","config":{"daemon_name":"default","guest_module":"guests/persistent_counter.wat","granted_operations":["wait"],"allow_http":false,"allow_raw_cdp":false,"persistent_guest_state":true}}
 {"command":"run"}

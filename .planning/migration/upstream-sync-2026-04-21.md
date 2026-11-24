@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `797f2d05e30e58b217ff621a99d302d712dc38da`
-- Commit range: `5bd1128b61bdfe462ba6ae587402b189996823ca..797f2d05e30e58b217ff621a99d302d712dc38da`
-- Count: 6 commits (4 non-merge, 2 merge)
+- Upstream target commit: `78dca5346138ab2bebd372308eeaeba6788f14cc`
+- Commit range: `797f2d05e30e58b217ff621a99d302d712dc38da..78dca5346138ab2bebd372308eeaeba6788f14cc`
+- Count: 106 commits (80 non-merge, 26 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -1439,6 +1439,59 @@
 - `git diff --check`: reports only `AGENTS.md:344: new blank line at EOF` from the pre-existing edit (exit 2); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
 - Sensitive scan: `./scripts/scan_sensitive.sh` exited `127` with `mapfile: command not found` under macOS Bash 3.2. No repo-local fallback exists, so the script's exact regex set was run through Python over `git ls-files --cached --others --exclude-standard`: `No obvious secrets or local path leaks found in 401 tracked/unignored files.` (exit 0).
 - `AGENTS.md`: left unmodified, unstaged, and unstashed by this run.
+
+## Daily Sync — 2026-11-25
+
+- Run date: `2026-11-25`.
+- Previous target: `797f2d05e30e58b217ff621a99d302d712dc38da`; new target: `78dca5346138ab2bebd372308eeaeba6788f14cc`.
+- Analysed range: `797f2d05e30e58b217ff621a99d302d712dc38da..upstream/main` (`106` total: `80` non-merge, `26` merge).
+- Upstream net diff: 45 files, `9053` insertions and `1588` deletions across Python runtime/tests, four domain skills, docs, MCP, packaging, and release metadata.
+
+### Commits Analyzed
+
+| Commits | Area | Decision |
+| --- | --- | --- |
+| `b401c02..d928b8f` | owner/tab isolation, daemon lifecycle, recordings, telemetry, docs | Ported the applicable Rust daemon/IPC helper semantics recorded below; Python-specific implementation and test layout remain inapplicable. |
+| `390bbe3`, `704996a`, `cf99c31`, `b7d2a40`, `be7e5ae`, `a3b0ccc` | owner rules, idle exit, iframe routing, IPC/runtime files | Ported per-name paths, protocol revision, 32 MiB request limit, optional idle exit, and existing session-scoped iframe behavior. Owner leasing remains tracked as a follow-up because the current Rust daemon has one explicit attached target per namespace. |
+| `47880ce`, `30e42b1`, `1682673`, `988139a`, `a2bd0cd`, `7987ca4` | daemon/admin cold-start and endpoint safety | Existing Rust `bhctl` launch and `bh-discovery` CDP URL support retained; endpoint comparison and remote lifecycle work are documented for the next daemon-control revision. |
+| `f02461c`, `8222aea`, `e4612d4` | network idle | Ported worker empty-`loaderId` exclusion; the runner already filters by active session, covering cross-target iframe activity. |
+| `a4c954d`, `adb67cc`, `41d73b5`, `cabfd48`, `8ebb93c`, `8f75cf6` | captcha solver/MCP | Inapplicable to this Rust runtime until the Browser Use proprietary CDP solver domain is exposed through its typed remote client; recorded rather than emulating an undocumented cloud API. |
+| `308650e` | page-info | Ported retry while the post-navigation document lacks `<html>`. |
+| `cf602b1`, `53653f0` | HTTP helper | Ported UTF-8 string versus binary-byte-array output through `HttpBody`; Rust `reqwest` stays local, preserving localhost/private-host access. |
+| `003d604`, `1225345` | runner UX | Existing long navigation/evaluation timeout retained; `new-tab` now returns both target ID and URL with compatibility for older string daemon replies. |
+| `13a7c73`, `1f13504`, `50c31e8`, `3a232d5`, `a8da10b` | telemetry/reporting | Inapplicable: upstream sends a Browser Use PostHog payload and depends on Python telemetry/install identity. The Rust fork retains no unrequested external telemetry sink. |
+| `18cded9`, `f7244b9`, `0332c5f`, release merges | Python packaging/release | Inapplicable: Rust Cargo workspace versioning, installer, and CI remain authoritative. |
+| `23a4bce`, `2212566`, `0752050`, `d35dc5b`, `68a967f`, `a15a072`, related merges | domain knowledge | Migrated final upstream content for `digitraffic`, `grants-gov`, `pegelonline`, and `statistics-sweden`. |
+| Remaining merges and Python unit/integration test commits in the range | merge/tests | Analysed as carriers or coverage for the decisions above; Python package/test files were intentionally excluded from this Rust workspace. |
+
+### Mapping Decisions
+
+| Upstream path or behavior | Rust destination | Decision |
+| --- | --- | --- |
+| `agent-workspace/domain-skills/{digitraffic,grants-gov,pegelonline,statistics-sweden}/scraping.md` | `domains/<site>/skill.md` and legacy `agent-workspace/domain-skills/<site>/scraping.md` | Migrated from final upstream; canonical fences changed from `python` to `text`, trailing whitespace stripped in both. |
+| per-name runtime files and 32 MiB IPC | `bh-discovery`, `bh-protocol`, `bh-daemon`, `bhrun` | Migrated with `bu-<BU_NAME>` paths, shared `MAX_REQUEST_BYTES`, daemon rejection, and client preflight. |
+| idle daemon timeout | `bh-daemon` | Migrated as `BH_IDLE_EXIT=1` plus positive `BH_IDLE_TIMEOUT`, defaulting to 1800 seconds when enabled. |
+| page-info document readiness | `bh-daemon` | Migrated with bounded `<html>` polling after navigation. |
+| HTTP binary body rule | `bh-wasm-host`, `bhrun`, `bh-guest-sdk`, HTTP guests | Migrated as a typed untagged `HttpBody` string/byte-array contract. |
+| new-tab result | `bh-daemon`, `bhrun`, `bh-wasm-host` | Migrated to typed `{target_id,url}` output while accepting legacy string replies. |
+| Python package, PyPI metadata, Python CI/tests, MCP-only Python server | — | Inapplicable to the Rust-native architecture. |
+
+### Per-Area Notes
+
+- The domain README table now lists all four imported sites.
+- `wait_for_network_idle` ignores worker bootstrap events with an empty loader ID; event session filtering keeps unrelated iframe/worker targets out of the caller's idle window.
+- `PROTOCOL_VERSION` is `2`, reflecting the request-budget and owner-ready wire revision.
+
+### Verification Evidence
+
+- `env -u CFLAGS -u CC cargo test -p bh-protocol -p bh-discovery -p bh-daemon -p bh-wasm-host -p bh-guest-sdk -p bhrun --manifest-path rust/Cargo.toml`: passed (exit 0), `175` tests passed.
+- `cargo fmt --all --manifest-path rust/Cargo.toml -- --check`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo test --workspace --manifest-path rust/Cargo.toml`: passed (exit 0), `211` tests passed and `0` failed.
+- `env -u CFLAGS -u CC cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0).
+- Built CLI smoke: `browser-harness --help`, `browser-harness summary`, `bhrun summary`, and `browser-harness doctor` each passed (exit 0). `bhrun http-get` against `https://example.com` returned a JSON UTF-8 string (exit 0).
+- `git diff --check -- . ':(exclude)AGENTS.md'`: passed (exit 0).
+- `python3 /Users/longnv/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: passed (exit 0): `No obvious secrets or local path leaks found in 417 tracked/unignored files.`
+- `git status --short` contained the intended audit, domains, docs, Rust runtime, SDK, host, and guest changes plus the pre-existing ` M AGENTS.md`; `AGENTS.md` remained untouched.
 
 ## Daily Sync — 2026-11-21
 

@@ -144,6 +144,24 @@ pub struct HttpGetRequest {
     pub timeout: f64,
 }
 
+/// HTTP bodies preserve UTF-8 text as a JSON string and expose binary data as
+/// a byte array, matching the harness str/bytes contract.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(untagged)]
+pub enum HttpBody {
+    Text(String),
+    Bytes(Vec<u8>),
+}
+
+impl HttpBody {
+    pub fn as_text(&self) -> Option<&str> {
+        match self {
+            Self::Text(value) => Some(value),
+            Self::Bytes(_) => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CdpRawRequest {
     #[serde(default = "default_daemon_name")]
@@ -250,6 +268,8 @@ pub struct TabSummary {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct NewTabResult {
     pub target_id: String,
+    #[serde(default)]
+    pub url: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

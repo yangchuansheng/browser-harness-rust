@@ -61,7 +61,7 @@ pub fn http_get(
     url: &str,
     headers: Option<BTreeMap<String, String>>,
     timeout: Option<f64>,
-) -> Result<String, GuestError> {
+) -> Result<bh_wasm_host::HttpBody, GuestError> {
     call_json(
         "http_get",
         &json!({
@@ -849,7 +849,7 @@ mod tests {
 
         let mut headers = BTreeMap::new();
         headers.insert("X-Test".to_string(), "value".to_string());
-        let body: String = call_json_with(
+        let body: bh_wasm_host::HttpBody = call_json_with(
             |operation, request, output| {
                 assert_eq!(operation, b"http_get");
                 let request: Value = serde_json::from_slice(request).expect("parse request");
@@ -871,7 +871,7 @@ mod tests {
             }),
         )
         .expect("http get result");
-        assert_eq!(body, "ok");
+        assert_eq!(body, bh_wasm_host::HttpBody::Text("ok".to_string()));
     }
 
     #[test]

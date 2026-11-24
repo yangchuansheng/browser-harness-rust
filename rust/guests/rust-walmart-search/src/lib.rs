@@ -71,7 +71,7 @@ pub extern "C" fn run() -> i32 {
 
 fn run_inner() -> Result<(), i32> {
     let html = http_get(TARGET_URL, None, Some(20.0)).map_err(|_| 1)?;
-    let script = extract_script_by_id(&html, "__NEXT_DATA__").ok_or(2)?;
+    let script = extract_script_by_id(html.as_text().ok_or(2)?, "__NEXT_DATA__").ok_or(2)?;
     let data: NextData = serde_json::from_str(script).map_err(|_| 3)?;
     let search = data.props.page_props.initial_data.search_result;
 

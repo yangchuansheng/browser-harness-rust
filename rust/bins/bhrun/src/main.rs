@@ -19,7 +19,7 @@ use bh_wasm_host::{
     CookieParam, CookieRecord, CurrentSessionRequest, CurrentSessionResult, CurrentTabRequest,
     DispatchKeyRequest, EnsureRealTabRequest, FillInputRequest, GetCookiesRequest, GotoRequest,
     GuestCallRecord, GuestRunResult, GuestServeRequest, GuestServeResponse, HandleDialogRequest,
-    HttpGetRequest, IframeTargetRequest, JsRequest, ListTabsRequest, MouseDownRequest,
+    HttpBody, HttpGetRequest, IframeTargetRequest, JsRequest, ListTabsRequest, MouseDownRequest,
     MouseMoveRequest, MouseUpRequest, NewTabRequest, NewTabResult, PageInfoRequest,
     PressKeyRequest, PrintPdfRequest, RunnerConfig, ScreenshotRequest, ScrollRequest,
     SetCookiesRequest, SetViewportRequest, SwitchTabRequest, SwitchTabResult, TabSummary,
@@ -469,7 +469,7 @@ fn wait(request: WaitRequest) -> WaitResult {
     }
 }
 
-fn http_get(request: HttpGetRequest) -> Result<String, String> {
+fn http_get(request: HttpGetRequest) -> Result<HttpBody, String> {
     let request = request.normalized();
     let runtime = Builder::new_current_thread()
         .enable_all()
@@ -491,10 +491,14 @@ fn http_get(request: HttpGetRequest) -> Result<String, String> {
         let response = response
             .error_for_status()
             .map_err(|err| format!("http GET {}: {err}", request.url))?;
-        response
-            .text()
+        let body = response
+            .bytes()
             .await
-            .map_err(|err| format!("decode HTTP response {}: {err}", request.url))
+            .map_err(|err| format!("read HTTP response {}: {err}", request.url))?;
+        match String::from_utf8(body.to_vec()) {
+            Ok(text) => Ok(HttpBody::Text(text)),
+            Err(_) => Ok(HttpBody::Bytes(body.to_vec())),
+        }
     })
 }
 
@@ -796,13 +800,19 @@ where
     F: FnMut(&str, &DaemonRequest) -> Result<DaemonResponse, String>,
 {
     let request = request.normalized();
-    let target_id: String = typed_meta_result_with_sender(
+    let result: Value = typed_meta_result_with_sender(
         &request.daemon_name,
         META_NEW_TAB,
         Some(json!({"url": request.url})),
         &mut sender,
     )?;
-    Ok(NewTabResult { target_id })
+    if let Some(target_id) = result.as_str() {
+        return Ok(NewTabResult {
+            target_id: target_id.to_string(),
+            url: request.url,
+        });
+    }
+    serde_json::from_value(result).map_err(|err| format!("parse new_tab result: {err}"))
 }
 
 fn close_tab_with_sender<F>(request: CloseTabRequest, mut sender: F) -> Result<(), String>
@@ -1129,6 +1139,13 @@ where
             let Some(method) = event.get("method").and_then(Value::as_str) else {
                 continue;
             };
+            // Worker scripts have an empty loaderId and complete on a worker
+            // target. They must not keep the page's network-idle wait alive.
+            if method == "Network.requestWillBeSent"
+                && event.pointer("/params/loaderId").and_then(Value::as_str) == Some("")
+            {
+                continue;
+            }
             if method.starts_with("Network.") {
                 last_activity = Instant::now();
             }
@@ -1927,6 +1944,13 @@ fn send_daemon_request(
 
     let payload =
         serde_json::to_vec(request).map_err(|err| format!("serialize daemon request: {err}"))?;
+    if payload.len() > bh_protocol::MAX_REQUEST_BYTES {
+        return Err(format!(
+            "IPC request is {:.1} MiB, over the {} MiB limit",
+            payload.len() as f64 / (1 << 20) as f64,
+            bh_protocol::MAX_REQUEST_BYTES >> 20
+        ));
+    }
     stream
         .write_all(&payload)
         .and_then(|_| stream.write_all(b"\n"))
@@ -2255,7 +2279,10 @@ mod tests {
         .expect("http get body");
         let request_text = handle.join().expect("server request");
 
-        assert_eq!(body, "fixture-body");
+        assert_eq!(
+            body,
+            bh_wasm_host::HttpBody::Text("fixture-body".to_string())
+        );
         assert!(request_text.starts_with("GET /headers HTTP/1.1\r\n"));
         assert!(request_text.contains("user-agent: Mozilla/5.0\r\n"));
         assert!(request_text.contains("x-test: value\r\n"));

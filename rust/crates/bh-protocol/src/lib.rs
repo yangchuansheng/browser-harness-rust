@@ -1,7 +1,8 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-pub const PROTOCOL_VERSION: u32 = 1;
+pub const PROTOCOL_VERSION: u32 = 2;
+pub const MAX_REQUEST_BYTES: usize = 32 << 20;
 
 pub const META_DRAIN_EVENTS: &str = "drain_events";
 pub const META_PING: &str = "ping";
@@ -43,6 +44,8 @@ pub const META_UPLOAD_FILE: &str = "upload_file";
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct DaemonRequest {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub method: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]

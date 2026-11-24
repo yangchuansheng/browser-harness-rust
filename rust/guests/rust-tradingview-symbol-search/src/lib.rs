@@ -34,7 +34,7 @@ fn run_inner() -> Result<(), i32> {
     let mut headers = BTreeMap::new();
     headers.insert("Origin".to_string(), "https://www.tradingview.com".to_string());
     let body = http_get(TARGET_URL, Some(headers), Some(20.0)).map_err(|_| 1)?;
-    let response: SymbolSearchResponse = serde_json::from_str(&body).map_err(|_| 2)?;
+    let response: SymbolSearchResponse = serde_json::from_str(body.as_text().ok_or(2)?).map_err(|_| 2)?;
 
     if !response.symbols_remaining.eq(&0) {
         return Err(3);

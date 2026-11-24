@@ -33,16 +33,10 @@ pub fn runtime_paths(name: Option<&str>) -> RuntimePaths {
     let name = validate_runtime_name(name.unwrap_or(DEFAULT_NAME)).unwrap_or(DEFAULT_NAME);
     let runtime_dir = runtime_dir();
     let tmp_dir = tmp_dir();
-    let runtime_stem = if std::env::var_os("BH_RUNTIME_DIR").is_some() {
-        "bu".to_string()
-    } else {
-        format!("bu-{name}")
-    };
-    let tmp_stem = if std::env::var_os("BH_TMP_DIR").is_some() {
-        "bu".to_string()
-    } else {
-        format!("bu-{name}")
-    };
+    // A caller-provided directory can be shared by several daemon names.
+    // Keep names in every runtime filename so those daemons remain isolated.
+    let runtime_stem = format!("bu-{name}");
+    let tmp_stem = format!("bu-{name}");
     RuntimePaths {
         sock: runtime_dir.join(format!("{runtime_stem}.sock")),
         pid: runtime_dir.join(format!("{runtime_stem}.pid")),

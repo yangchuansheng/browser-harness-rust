@@ -91,5 +91,5 @@ fn fetch_json<T: DeserializeOwned>(
     parse_err: i32,
 ) -> Result<T, i32> {
     let body = http_get(url, None, Some(20.0)).map_err(|_| fetch_err)?;
-    serde_json::from_str(&body).map_err(|_| parse_err)
+    serde_json::from_str(body.as_text().ok_or(parse_err)?).map_err(|_| parse_err)
 }
