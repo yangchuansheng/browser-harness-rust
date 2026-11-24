@@ -1490,7 +1490,7 @@
 - `env -u CFLAGS -u CC cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0).
 - Built CLI smoke: `browser-harness --help`, `browser-harness summary`, `bhrun summary`, and `browser-harness doctor` each passed (exit 0). `bhrun http-get` against `https://example.com` returned a JSON UTF-8 string (exit 0).
 - `git diff --check -- . ':(exclude)AGENTS.md'`: passed (exit 0).
-- `python3 /Users/longnv/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: passed (exit 0): `No obvious secrets or local path leaks found in 417 tracked/unignored files.`
+- `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: passed (exit 0): `No obvious secrets or local path leaks found in 417 tracked/unignored files.`
 - `git status --short` contained the intended audit, domains, docs, Rust runtime, SDK, host, and guest changes plus the pre-existing ` M AGENTS.md`; `AGENTS.md` remained untouched.
 
 ## Daily Sync — 2026-11-21
