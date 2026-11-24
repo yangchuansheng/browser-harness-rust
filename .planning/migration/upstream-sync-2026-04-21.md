@@ -1493,6 +1493,27 @@
 - `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: passed (exit 0): `No obvious secrets or local path leaks found in 417 tracked/unignored files.`
 - `git status --short` contained the intended audit, domains, docs, Rust runtime, SDK, host, and guest changes plus the pre-existing ` M AGENTS.md`; `AGENTS.md` remained untouched.
 
+### Follow-up Parity Pass (2026-11-25)
+
+- `a2bd0cd`: Ported. `RuntimePaths` now includes a private `bu-<name>.cdp` file. The daemon persists its resolved websocket endpoint after connecting, and `bhctl ensure-daemon` compares a caller's resolved `BU_CDP_WS` or `BU_CDP_URL` before every reuse/adoption path. A mismatch returns the typed `cdp-mismatch:` error with redacted endpoint labels.
+- `988139a`: Ported. Initial local CDP connection retries only immediate HTTP 403 failures for at most five two-second backoff intervals; delayed 403 responses, timeouts, and remote connections return their original error.
+- `bcc1d3b`: Ported. Daemon tab summaries and the typed `TabSummary` response always carry `target_id`, `title`, and `url`; the DTO also accepts the prior `targetId` wire spelling for compatibility.
+- `7987ca4`: Ported. When `ensure-daemon` adopts a pending remote/CDP daemon that exits before becoming ready, it starts one replacement daemon instead of reporting the departed daemon's log tail.
+- `47880ce`: Deferred with a bounded architectural reason. The only Rust `start_remote_daemon` is an internal `bhsmoke` orchestration helper; public remote lifecycle is intentionally split into `create-browser` and `ensure-daemon`, and no per-name remote-browser marker exists. Adding marker ownership and cleanup would introduce a new remote lifecycle state model beyond this pass. Existing `bhd` still stops its configured Browser Use browser during graceful shutdown through `bh-remote`.
+- Owner leasing / `BH_OWNER` / `release_tabs`: deferred because this daemon maintains one explicit attached target per namespace.
+- Captcha solver cloud domain: deferred because the typed Browser Use client does not expose the proprietary solver endpoint.
+- PostHog telemetry: deferred because the Rust runtime intentionally has no external telemetry sink.
+
+#### Follow-up Verification Evidence
+
+- `env -u CFLAGS -u CC cargo test -p bh-discovery -p bh-daemon -p bh-wasm-host -p bhrun -p bhctl --manifest-path rust/Cargo.toml`: passed (exit 0), including endpoint persistence/mismatch, cold-403 retry bounds, typed tab serialization, and remote replacement decision tests.
+- `cargo fmt --all --manifest-path rust/Cargo.toml -- --check`: passed (exit 0).
+- `env -u CFLAGS -u CC cargo test --workspace --manifest-path rust/Cargo.toml`: passed (exit 0), 217 tests passed and 0 failed.
+- `env -u CFLAGS -u CC cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0).
+- Built CLI smoke with `rust/target/debug` first on `PATH`: `browser-harness --help`, `browser-harness summary`, `bhrun summary`, and `browser-harness doctor` each passed (exit 0).
+- `git diff --check -- . ':(exclude)AGENTS.md'`: passed (exit 0).
+- `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: passed (exit 0) after test fixtures used non-local example endpoints.
+
 ## Daily Sync — 2026-11-21
 
 - Run date: `2026-11-21`

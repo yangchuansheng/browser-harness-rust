@@ -2451,8 +2451,8 @@ mod tests {
                 );
                 Ok(DaemonResponse {
                     result: Some(json!([
-                        {"targetId":"target-1","title":"One","url":"about:blank"},
-                        {"targetId":"target-2","title":"Two","url":"https://example.com"}
+                        {"target_id":"target-1","title":"One","url":"about:blank"},
+                        {"target_id":"target-2","title":"Two","url":"https://example.com"}
                     ])),
                     ..DaemonResponse::default()
                 })

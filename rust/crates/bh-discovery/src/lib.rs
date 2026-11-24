@@ -26,6 +26,7 @@ pub struct RuntimePaths {
     pub name: String,
     pub sock: PathBuf,
     pub pid: PathBuf,
+    pub cdp: PathBuf,
     pub log: PathBuf,
 }
 
@@ -40,6 +41,7 @@ pub fn runtime_paths(name: Option<&str>) -> RuntimePaths {
     RuntimePaths {
         sock: runtime_dir.join(format!("{runtime_stem}.sock")),
         pid: runtime_dir.join(format!("{runtime_stem}.pid")),
+        cdp: runtime_dir.join(format!("{runtime_stem}.cdp")),
         log: tmp_dir.join(format!("{tmp_stem}.log")),
         name: name.to_string(),
     }
@@ -296,18 +298,11 @@ pub fn supported_browser_running() -> bool {
 }
 
 pub fn get_ws_url() -> Result<String, String> {
-    if let Ok(url) = std::env::var("BU_CDP_WS") {
-        let trimmed = url.trim();
-        if !trimmed.is_empty() {
-            return Ok(trimmed.to_string());
-        }
-    }
-
-    if let Ok(url) = std::env::var("BU_CDP_URL") {
-        let trimmed = url.trim();
-        if !trimmed.is_empty() {
-            return ws_from_cdp_url(trimmed, Duration::from_secs(30));
-        }
+    if let Some(endpoint) = resolve_cdp_endpoint(
+        std::env::var("BU_CDP_WS").ok().as_deref(),
+        std::env::var("BU_CDP_URL").ok().as_deref(),
+    )? {
+        return Ok(endpoint);
     }
 
     let profiles = default_browser_profiles();
@@ -381,6 +376,19 @@ pub fn get_ws_url() -> Result<String, String> {
         "DevToolsActivePort not found in {:?} — enable chrome://inspect/#remote-debugging, or set BU_CDP_WS for a remote browser",
         searched
     ))
+}
+
+pub fn resolve_cdp_endpoint(
+    cdp_ws: Option<&str>,
+    cdp_url: Option<&str>,
+) -> Result<Option<String>, String> {
+    if let Some(url) = cdp_ws.map(str::trim).filter(|url| !url.is_empty()) {
+        return Ok(Some(url.to_string()));
+    }
+    if let Some(url) = cdp_url.map(str::trim).filter(|url| !url.is_empty()) {
+        return ws_from_cdp_url(url, Duration::from_secs(30)).map(Some);
+    }
+    Ok(None)
 }
 
 fn read_devtools_active_port(base: &PathBuf) -> Option<(u16, String)> {
@@ -622,6 +630,7 @@ mod tests {
         assert_eq!(paths.name, "work");
         assert_eq!(paths.sock.to_string_lossy(), "/tmp/bu-work.sock");
         assert_eq!(paths.pid.to_string_lossy(), "/tmp/bu-work.pid");
+        assert_eq!(paths.cdp.to_string_lossy(), "/tmp/bu-work.cdp");
         assert_eq!(
             paths.log.to_string_lossy(),
             std::env::temp_dir().join("bu-work.log").to_string_lossy()

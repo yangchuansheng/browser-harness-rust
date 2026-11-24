@@ -1,5 +1,8 @@
+use std::collections::hash_map::DefaultHasher;
 use std::collections::BTreeMap;
+use std::fmt;
 use std::fs;
+use std::hash::{Hash, Hasher};
 #[cfg(target_os = "macos")]
 use std::io::Write;
 use std::io::{self, Read};
@@ -14,7 +17,7 @@ use bh_daemon::{
 };
 use bh_discovery::{
     default_browser_profiles, inspect_marker, remote_debugging_toggle_profiles,
-    remote_debugging_user_enabled, supported_browser_running,
+    remote_debugging_user_enabled, resolve_cdp_endpoint, supported_browser_running,
 };
 use bh_remote::{
     auth_status, browser_use_api_key, clear_browser_use_auth, store_browser_use_api_key,
@@ -26,6 +29,38 @@ const INSPECT_REOPEN_TTL: Duration = Duration::from_secs(180);
 const CHROME_INSPECT_URL: &str = "chrome://inspect/#remote-debugging";
 const MAC_APPROVE_ACCESSIBILITY_DETAIL: &str =
     "allow the app launching browser-harness (for example Terminal, iTerm, or Codex) in System Settings > Privacy & Security > Accessibility";
+const REMOTE_DAEMON_REPLACED: &str = "remote daemon exited while startup was being adopted";
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum CdpEndpointCheckError {
+    Mismatch {
+        daemon: String,
+        attached: String,
+        requested: String,
+    },
+    MissingAttachment {
+        daemon: String,
+    },
+}
+
+impl fmt::Display for CdpEndpointCheckError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Mismatch {
+                daemon,
+                attached,
+                requested,
+            } => write!(
+                formatter,
+                "cdp-mismatch: daemon {daemon:?} is attached to {attached}, requested {requested}; use another BU_NAME or restart this daemon"
+            ),
+            Self::MissingAttachment { daemon } => write!(
+                formatter,
+                "cdp-endpoint-unavailable: daemon {daemon:?} has no persisted CDP endpoint; restart this daemon before reusing it with BU_CDP_WS or BU_CDP_URL"
+            ),
+        }
+    }
+}
 
 #[cfg(target_os = "macos")]
 const MAC_APPROVE_CHROME_ROOT_SUFFIX: &str = "Library/Application Support/Google/Chrome";
@@ -425,8 +460,20 @@ fn parse_list_browsers_options(payload: Option<Value>) -> Result<ListBrowsersOpt
 
 fn ensure_daemon_output() -> Result<Value, String> {
     let options = parse_ensure_daemon_options(read_json_stdin()?)?;
+    for attempt in 0..2 {
+        match ensure_daemon_once(&options) {
+            Err(error) if error == REMOTE_DAEMON_REPLACED && attempt == 0 => continue,
+            result => return result,
+        }
+    }
+    unreachable!("ensure daemon retry loop returns on its final attempt")
+}
+
+fn ensure_daemon_once(options: &EnsureDaemonOptions) -> Result<Value, String> {
     let config = daemon_config(options.name.as_deref());
+    let requested_endpoint = requested_cdp_endpoint(options)?;
     if already_running(&config) {
+        ensure_cdp_endpoint_matches(&config, requested_endpoint.as_deref())?;
         return Ok(json!({
             "ok": true,
             "alreadyRunning": true,
@@ -438,6 +485,7 @@ fn ensure_daemon_output() -> Result<Value, String> {
     let (mut child, pending) = {
         let _lock = spawn_lock(&config)?;
         if already_running(&config) {
+            ensure_cdp_endpoint_matches(&config, requested_endpoint.as_deref())?;
             return Ok(json!({"ok": true, "alreadyRunning": true, "name": config.name}));
         }
         if let Some(generation) = pending_generation(&config)? {
@@ -466,6 +514,7 @@ fn ensure_daemon_output() -> Result<Value, String> {
         options.wait_seconds,
         &mut child,
         &pending,
+        requested_endpoint.as_deref(),
     )
 }
 
@@ -475,12 +524,14 @@ fn wait_for_daemon(
     explicit_wait: Option<f64>,
     child: &mut Option<std::process::Child>,
     pending: &PendingGeneration,
+    requested_endpoint: Option<&str>,
 ) -> Result<Value, String> {
     let started = Instant::now();
     let mut deadline = Some(started + Duration::from_secs_f64(explicit_wait.unwrap_or(60.0)));
     let mut hinted = !local;
     loop {
         if already_running(config) {
+            ensure_cdp_endpoint_matches(config, requested_endpoint)?;
             return Ok(json!({"ok": true, "alreadyRunning": false, "name": config.name}));
         }
         let died = child
@@ -510,6 +561,9 @@ fn wait_for_daemon(
             }
         }
         if died {
+            if should_replace_exiting_remote_daemon(local, child.is_none()) {
+                return Err(REMOTE_DAEMON_REPLACED.to_string());
+            }
             if local && chrome_not_running(&message) && launch_browser() {
                 let boot_deadline = Instant::now() + Duration::from_secs(15);
                 while Instant::now() < boot_deadline && !supported_browser_running() {
@@ -545,6 +599,74 @@ fn wait_for_daemon(
         }
         thread::sleep(Duration::from_millis(200));
     }
+}
+
+fn requested_cdp_endpoint(options: &EnsureDaemonOptions) -> Result<Option<String>, String> {
+    let browser_id = option_env(options, "BU_BROWSER_ID");
+    if browser_id
+        .as_deref()
+        .is_some_and(|value| !value.trim().is_empty())
+    {
+        return Ok(None);
+    }
+    resolve_cdp_endpoint(
+        option_env(options, "BU_CDP_WS").as_deref(),
+        option_env(options, "BU_CDP_URL").as_deref(),
+    )
+}
+
+fn option_env(options: &EnsureDaemonOptions, key: &str) -> Option<String> {
+    options
+        .env
+        .get(key)
+        .cloned()
+        .or_else(|| std::env::var(key).ok())
+}
+
+fn ensure_cdp_endpoint_matches(
+    config: &DaemonConfig,
+    requested_endpoint: Option<&str>,
+) -> Result<(), String> {
+    let Some(requested_endpoint) = requested_endpoint else {
+        return Ok(());
+    };
+    let attached_endpoint = fs::read_to_string(&config.paths().cdp).map_err(|_| {
+        CdpEndpointCheckError::MissingAttachment {
+            daemon: config.name.clone(),
+        }
+        .to_string()
+    })?;
+    if equivalent_cdp_endpoints(&attached_endpoint, requested_endpoint) {
+        return Ok(());
+    }
+    Err(CdpEndpointCheckError::Mismatch {
+        daemon: config.name.clone(),
+        attached: safe_endpoint_label(&attached_endpoint),
+        requested: safe_endpoint_label(requested_endpoint),
+    }
+    .to_string())
+}
+
+fn equivalent_cdp_endpoints(left: &str, right: &str) -> bool {
+    left.trim().trim_end_matches('/') == right.trim().trim_end_matches('/')
+}
+
+fn safe_endpoint_label(endpoint: &str) -> String {
+    let endpoint = endpoint.trim();
+    let authority = endpoint
+        .split_once("://")
+        .map(|(_, rest)| rest)
+        .unwrap_or(endpoint)
+        .split('/')
+        .next()
+        .unwrap_or("<unknown>");
+    let mut hasher = DefaultHasher::new();
+    endpoint.hash(&mut hasher);
+    format!("{authority}#{:08x}", hasher.finish() as u32)
+}
+
+fn should_replace_exiting_remote_daemon(is_local: bool, adopted_pending_daemon: bool) -> bool {
+    !is_local && adopted_pending_daemon
 }
 
 fn ensure_daemon_uses_local_browser(options: &EnsureDaemonOptions) -> bool {
@@ -1216,12 +1338,14 @@ mod tests {
 
     use super::{
         browser_launch_spec, chrome_not_running, classify_mac_approve_output,
-        daemon_launch_command, daemon_startup_error, doctor_output,
-        ensure_daemon_uses_local_browser, inspect_marker_is_fresh, mac_approve_toggle_enabled,
-        needs_chrome_permission_popup, needs_chrome_remote_debugging_prompt,
-        parse_created_profile_id, parse_ensure_daemon_options, parse_list_browsers_options,
-        profile_directory_args, profile_use_sync_command, resolve_daemon_name,
-        should_show_remote_live_view, EnsureDaemonOptions, ListBrowsersOptions,
+        daemon_launch_command, daemon_startup_error, doctor_output, ensure_cdp_endpoint_matches,
+        ensure_daemon_uses_local_browser, equivalent_cdp_endpoints, inspect_marker_is_fresh,
+        mac_approve_toggle_enabled, needs_chrome_permission_popup,
+        needs_chrome_remote_debugging_prompt, parse_created_profile_id,
+        parse_ensure_daemon_options, parse_list_browsers_options, profile_directory_args,
+        profile_use_sync_command, requested_cdp_endpoint, resolve_daemon_name,
+        should_replace_exiting_remote_daemon, should_show_remote_live_view, EnsureDaemonOptions,
+        ListBrowsersOptions,
     };
 
     fn env_lock() -> &'static Mutex<()> {
@@ -1409,6 +1533,57 @@ mod tests {
             "wss://example.test/devtools/browser/abc".to_string(),
         );
         assert!(!ensure_daemon_uses_local_browser(&remote));
+    }
+
+    #[test]
+    fn daemon_reuse_requires_the_persisted_cdp_endpoint_to_match() {
+        let config = super::daemon_config(Some("cdp-endpoint-test"));
+        fs::write(
+            &config.paths().cdp,
+            "ws://example.test/devtools/browser/one",
+        )
+        .unwrap();
+
+        assert!(ensure_cdp_endpoint_matches(
+            &config,
+            Some("ws://example.test/devtools/browser/one/")
+        )
+        .is_ok());
+        let error =
+            ensure_cdp_endpoint_matches(&config, Some("ws://example.test/devtools/browser/two"))
+                .unwrap_err();
+        assert!(error.starts_with("cdp-mismatch:"));
+        assert!(!error.contains("/devtools/browser/two"));
+        let _ = fs::remove_file(config.paths().cdp);
+    }
+
+    #[test]
+    fn requested_explicit_ws_endpoint_uses_ensure_environment() {
+        let options = EnsureDaemonOptions {
+            name: None,
+            wait_seconds: None,
+            env: [(
+                "BU_CDP_WS".to_string(),
+                "ws://example.test/session".to_string(),
+            )]
+            .into_iter()
+            .collect(),
+        };
+        assert_eq!(
+            requested_cdp_endpoint(&options).unwrap(),
+            Some("ws://example.test/session".to_string())
+        );
+        assert!(equivalent_cdp_endpoints(
+            "ws://example.test/session/",
+            "ws://example.test/session"
+        ));
+    }
+
+    #[test]
+    fn an_exiting_adopted_remote_daemon_gets_one_replacement_attempt() {
+        assert!(should_replace_exiting_remote_daemon(false, true));
+        assert!(!should_replace_exiting_remote_daemon(true, true));
+        assert!(!should_replace_exiting_remote_daemon(false, false));
     }
 
     #[test]

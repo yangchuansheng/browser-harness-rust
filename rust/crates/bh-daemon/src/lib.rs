@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::fs::{self, File, OpenOptions};
 use std::io::{Cursor, ErrorKind, Read, Write};
 use std::os::fd::AsRawFd;
-use std::os::unix::fs::PermissionsExt;
+use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
 use std::os::unix::net::UnixStream;
 use std::sync::{
     atomic::{AtomicUsize, Ordering},
@@ -32,6 +32,9 @@ use tokio::time::{sleep, Instant};
 
 pub const DEFAULT_EVENT_CAPACITY: usize = 500;
 const MAX_SESSION_REPLACEMENTS: usize = 32;
+const EARLY_403_WINDOW: Duration = Duration::from_millis(1500);
+const EARLY_403_RETRIES: usize = 5;
+const EARLY_403_DELAY: Duration = Duration::from_secs(2);
 const MARK_JS: &str =
     "const m=String.fromCodePoint(0x1F434);if(!document.title.startsWith(m))document.title=m+' '+document.title";
 
@@ -2350,6 +2353,7 @@ pub fn cleanup_runtime_files(config: &DaemonConfig) {
     if own.is_some() && own == record {
         let _ = fs::remove_file(paths.pid);
         let _ = fs::remove_file(paths.sock);
+        let _ = fs::remove_file(paths.cdp);
     }
 }
 
@@ -2358,6 +2362,7 @@ fn cleanup_generation_files(config: &DaemonConfig, expected: &PendingGeneration)
         let paths = config.paths();
         let _ = fs::remove_file(paths.pid);
         let _ = fs::remove_file(paths.sock);
+        let _ = fs::remove_file(paths.cdp);
     }
 }
 
@@ -2500,11 +2505,8 @@ pub async fn serve(config: &DaemonConfig) -> Result<(), String> {
             "handshake-wait: if Chrome shows an Allow remote debugging popup, click Allow",
         );
     }
-    let (cdp, events_rx) = if is_local {
-        CdpClient::connect(url).await?
-    } else {
-        CdpClient::connect_with_timeout(url, 45).await?
-    };
+    let (cdp, events_rx) = connect_cdp_with_cold_launch_retry(config, &url, is_local).await?;
+    write_cdp_endpoint(config, &url)?;
     let (shutdown_tx, mut shutdown_rx) = watch::channel(false);
     let daemon = Daemon::new(config.clone(), cdp.clone(), shutdown_tx);
     daemon.attach_first_page().await?;
@@ -2553,6 +2555,58 @@ pub async fn serve(config: &DaemonConfig) -> Result<(), String> {
         }
     }
 
+    Ok(())
+}
+
+async fn connect_cdp_with_cold_launch_retry(
+    config: &DaemonConfig,
+    url: &str,
+    is_local: bool,
+) -> Result<(CdpClient, mpsc::UnboundedReceiver<CdpEvent>), String> {
+    for attempt in 0..=EARLY_403_RETRIES {
+        let started = Instant::now();
+        let result = if is_local {
+            CdpClient::connect(url).await
+        } else {
+            CdpClient::connect_with_timeout(url, 45).await
+        };
+        match result {
+            Ok(connected) => return Ok(connected),
+            Err(error) if should_retry_early_403(is_local, started.elapsed(), &error, attempt) => {
+                log_line(
+                    config,
+                    &format!(
+                        "handshake-denied-early: Chrome returned 403 before a window was ready; retry {}/{} in {}s",
+                        attempt + 1,
+                        EARLY_403_RETRIES,
+                        EARLY_403_DELAY.as_secs()
+                    ),
+                );
+                sleep(EARLY_403_DELAY).await;
+            }
+            Err(error) => return Err(error),
+        }
+    }
+    unreachable!("retry loop returns after its final attempt")
+}
+
+fn should_retry_early_403(is_local: bool, elapsed: Duration, error: &str, attempt: usize) -> bool {
+    is_local && attempt < EARLY_403_RETRIES && elapsed < EARLY_403_WINDOW && error.contains("403")
+}
+
+fn write_cdp_endpoint(config: &DaemonConfig, endpoint: &str) -> Result<(), String> {
+    let path = config.paths().cdp;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .mode(0o600)
+        .open(&path)
+        .map_err(|error| format!("open CDP endpoint: {error}"))?;
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
+        .map_err(|error| format!("chmod CDP endpoint: {error}"))?;
+    file.write_all(endpoint.as_bytes())
+        .map_err(|error| format!("write CDP endpoint: {error}"))?;
     Ok(())
 }
 
@@ -2712,7 +2766,7 @@ fn harness_opened_inspect() -> bool {
 fn tab_summary(target: &Value) -> serde_json::Map<String, Value> {
     let mut summary = serde_json::Map::new();
     summary.insert(
-        "targetId".to_string(),
+        "target_id".to_string(),
         Value::String(
             target
                 .get("targetId")
@@ -3028,7 +3082,7 @@ fn process_exists(pid: i32) -> Result<bool, String> {
 #[cfg(test)]
 mod tests {
     use std::fs;
-    use std::time::{SystemTime, UNIX_EPOCH};
+    use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
     use serde_json::{json, Value};
 
@@ -3038,8 +3092,9 @@ mod tests {
         is_real_page, is_reusable_blank_page, is_reusable_new_tab_page, key_fields, log_tail,
         pending_generation, png_dimensions_from_base64, press_key_effective_modifiers,
         process_start_fingerprint, publish_pending_generation, push_event, redact_cdp_endpoint,
-        shrink_png_data_url, stop_action, stop_best_effort, stop_remote, tab_marker_enabled,
-        tab_summary, DaemonConfig, DaemonState, PendingGeneration, StopAction,
+        should_retry_early_403, shrink_png_data_url, stop_action, stop_best_effort, stop_remote,
+        tab_marker_enabled, tab_summary, write_cdp_endpoint, DaemonConfig, DaemonState,
+        PendingGeneration, StopAction, EARLY_403_RETRIES, EARLY_403_WINDOW,
         MAX_SESSION_REPLACEMENTS,
     };
 
@@ -3381,11 +3436,56 @@ mod tests {
         assert_eq!(
             Value::Object(summary),
             json!({
-                "targetId": "target-1",
+                "target_id": "target-1",
                 "title": "Example",
                 "url": "https://example.com/"
             })
         );
+    }
+
+    #[test]
+    fn cold_launch_retry_is_limited_to_immediate_local_403_responses() {
+        assert!(should_retry_early_403(
+            true,
+            Duration::from_millis(100),
+            "CDP WS handshake failed: HTTP 403",
+            0
+        ));
+        assert!(!should_retry_early_403(
+            false,
+            Duration::from_millis(100),
+            "CDP WS handshake failed: HTTP 403",
+            0
+        ));
+        assert!(!should_retry_early_403(
+            true,
+            EARLY_403_WINDOW,
+            "CDP WS handshake failed: HTTP 403",
+            0
+        ));
+        assert!(!should_retry_early_403(
+            true,
+            Duration::from_millis(100),
+            "CDP WS handshake timed out",
+            0
+        ));
+        assert!(!should_retry_early_403(
+            true,
+            Duration::from_millis(100),
+            "CDP WS handshake failed: HTTP 403",
+            EARLY_403_RETRIES
+        ));
+    }
+
+    #[test]
+    fn daemon_persists_its_resolved_cdp_endpoint() {
+        let config = test_config("cdp-endpoint");
+        write_cdp_endpoint(&config, "ws://example.test/devtools/browser/test").unwrap();
+        assert_eq!(
+            fs::read_to_string(config.paths().cdp).unwrap(),
+            "ws://example.test/devtools/browser/test"
+        );
+        let _ = fs::remove_file(config.paths().cdp);
     }
 
     #[test]

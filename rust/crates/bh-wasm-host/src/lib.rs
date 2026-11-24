@@ -259,7 +259,7 @@ pub struct WaitForLoadRequest {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TabSummary {
-    #[serde(rename = "targetId")]
+    #[serde(alias = "targetId")]
     pub target_id: String,
     pub title: String,
     pub url: String,
@@ -2452,7 +2452,7 @@ mod tests {
         JsRequest, ListTabsRequest, MouseDownRequest, MouseMoveRequest, MouseUpRequest,
         NewTabRequest, PageInfoRequest, PressKeyRequest, PrintPdfRequest, ProtocolFamilyKind,
         ScreenshotRequest, ScrollRequest, SetCookiesRequest, SetViewportRequest, Stability,
-        SwitchTabRequest, TypeTextRequest, UploadFileRequest, WaitForConsoleRequest,
+        SwitchTabRequest, TabSummary, TypeTextRequest, UploadFileRequest, WaitForConsoleRequest,
         WaitForDialogRequest, WaitForDownloadRequest, WaitForEventRequest, WaitForLoadEventRequest,
         WaitForLoadRequest, WaitForRequestRequest, WaitForResponseRequest, WatchEventsLine,
         WatchEventsRequest,
@@ -2729,6 +2729,23 @@ mod tests {
 
         assert_eq!(normalized.daemon_name, "default");
         assert!(!normalized.include_internal);
+    }
+
+    #[test]
+    fn tab_summary_serializes_snake_case_and_reads_legacy_camel_case() {
+        let tab = TabSummary {
+            target_id: "target-1".to_string(),
+            title: "Example".to_string(),
+            url: "https://example.com".to_string(),
+        };
+        assert_eq!(serde_json::to_value(&tab).unwrap()["target_id"], "target-1");
+        let legacy: TabSummary = serde_json::from_value(json!({
+            "targetId": "target-2",
+            "title": "Legacy",
+            "url": "about:blank"
+        }))
+        .unwrap();
+        assert_eq!(legacy.target_id, "target-2");
     }
 
     #[test]
