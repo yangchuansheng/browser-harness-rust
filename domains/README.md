@@ -51,6 +51,7 @@ find domains -maxdepth 1 -type d | sort
 
 | Site | Capability |
 |------|------------|
+| `camara-deputados` | Find recent Brazilian bills by topic and tally party votes from the Chamber of Deputies open API. |
 | `census-geocoder` | Geocode U.S. addresses and coordinates to county, census tract, block, and congressional-district layers. |
 | `cisa-kev` | Query the CISA KEV JSON feed for recent or vendor CVEs with due dates, required actions, and ransomware use. |
 | `cleveland-museum` | Find CC0 artworks by artist or keyword with metadata, credit lines, and downloadable web/print images. |
@@ -67,7 +68,9 @@ find domains -maxdepth 1 -type d | sort
 | `gleif` | Find legal entities by name, inspect LEI status and registration data, and list reported direct subsidiaries. |
 | `grants-gov` | Search U.S. federal funding opportunities and retrieve opportunity details, eligibility, and deadlines. |
 | `geo-admin-ch` | Geocode a Swiss address or place name to WGS84 and LV95 coordinates, get its elevation, commune, and a terrain profile. |
+| `geonet` | List recent GeoNet quakes at MMI 4+ and current volcanic alert levels for New Zealand. |
 | `icd-10-cm` | Resolve condition descriptions to ICD-10-CM codes or look up a code's official name via NLM CTSS. |
+| `kmb` | Find a KMB stop by name and get the next bus arrivals in Hong Kong time. |
 | `library-of-congress` | Search digitized photos and maps by topic with titles, dates, image URLs, and rights notes via the JSON API. |
 | `medlineplus` | Get the plain-language MedlinePlus health-topic summary and page link for a condition. |
 | `noaa-space-weather` | Check current geomagnetic, solar radiation, and radio blackout levels, Kp forecasts, and active space-weather alerts. |
@@ -79,12 +82,11 @@ find domains -maxdepth 1 -type d | sort
 | `rubygems` | Look up Ruby gem versions, downloads, licences and source links, list dependents, or search gems. |
 | `rxnorm` | Normalize drug names to RxCUI concepts and list brands, clinical drugs, strengths, and dose forms. |
 | `smhi` | Get the next 48 hours of hourly temperature, wind and precipitation for a Swedish town by coordinates, plus active SMHI weather warnings. |
+| `statistics-denmark` | Query Statistics Denmark StatBank tables for population and municipal figures via JSON-stat, CSV, or BULK. |
 | `statistics-norway` | Search SSB tables, inspect their variables, and pull the latest official population, CPI or unemployment figures. |
 | `statistics-sweden` | Query Statistics Sweden PXWeb tables for official Swedish statistical series. |
 | `ted-tenders` | Find open EU public tenders by keyword, CPV code or buyer country, with title, buyer, country, submission deadline and notice link. |
 | `usgs-elevation` | Look up ground elevation for a latitude/longitude point via the USGS Elevation Point Query Service. |
 
-When adding or updating a site, prefer `domains/<site>/` (plus a verbatim
-`agent-workspace/domain-skills/<site>/scraping.md` mirror when syncing upstream
-domain skills) and avoid secrets, cookies, session tokens, task narration, and
-raw pixel coordinates.
+When adding or updating a site, prefer `domains/<site>/` and avoid secrets,
+cookies, session tokens, task narration, and raw pixel coordinates.

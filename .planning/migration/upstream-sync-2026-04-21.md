@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `78dca5346138ab2bebd372308eeaeba6788f14cc`
-- Commit range: `797f2d05e30e58b217ff621a99d302d712dc38da..78dca5346138ab2bebd372308eeaeba6788f14cc`
-- Count: 106 commits (80 non-merge, 26 merge)
+- Upstream target commit: `373aecc4c40ef67d97b5ee69c144684a64a42a11`
+- Commit range: `78dca5346138ab2bebd372308eeaeba6788f14cc..373aecc4c40ef67d97b5ee69c144684a64a42a11`
+- Count: 11 commits (7 non-merge, 4 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -23,7 +23,7 @@
 - Updated controlled-tab marker to 🐴 and fixed marker removal.
 - Preserved target attachment status for `current_tab` and `set_session` flows.
 - Added remote-specific CDP handshake messaging for cloud websocket failures.
-- Latest sync (`a7c4cb0..389d9c0`, 2026-11-14): docs and domain-skills only; no Python or Rust runtime behavior changed.
+- Latest sync (`78dca53..373aecc`, 2026-11-26): four domain skills imported; the Python telemetry hardening and package version bump are inapplicable to the Rust-native runtime.
 
 ## Migrated Helper/API Surface
 
@@ -1513,6 +1513,66 @@
 - Built CLI smoke with `rust/target/debug` first on `PATH`: `browser-harness --help`, `browser-harness summary`, `bhrun summary`, and `browser-harness doctor` each passed (exit 0).
 - `git diff --check -- . ':(exclude)AGENTS.md'`: passed (exit 0).
 - `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: passed (exit 0) after test fixtures used non-local example endpoints.
+
+## Daily Sync — 2026-11-26
+
+- Run date: `2026-11-26`.
+- Previous target: `78dca5346138ab2bebd372308eeaeba6788f14cc`; new target: `373aecc4c40ef67d97b5ee69c144684a64a42a11`.
+- Analysed range: `78dca5346138ab2bebd372308eeaeba6788f14cc..373aecc4c40ef67d97b5ee69c144684a64a42a11` (`11` total: `7` non-merge, `4` merge).
+- Upstream net diff: `8` files, `3217` insertions and `40` deletions: four new domain skills, Python CLI telemetry hardening, and a Python package version bump. The Rust runtime, tests, installer, and public CLI surfaces are unchanged.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `8e983f4` | `domain-skills: add geonet, camara-deputados, kmb, statistics-denmark` | domains | Migrated all four sites to `domains/<site>/skill.md`, folded with the review fixes below |
+| `ec634be` | `domain-skills: code-review fixes for geonet, camara-deputados, kmb, statistics-denmark (#1074)` | domains | Folded into final per-site content |
+| `0ac4995` | `domain-skills: run notes name the runs shown, no review wording (#1074)` | domains | Folded into final per-site content |
+| `9dcfb44` | `Merge pull request #1074 from browser-use/domain-skills/aeo-2026-11-24` | merge | Carries `8e983f4`, `ec634be`, and `0ac4995` |
+| `cbe624d` | `kmb, camara-deputados: fixes from website#845 review` | domains | Folded into final per-site content |
+| `eec49ce` | `Merge pull request #1075 from browser-use/skills/aeo-1124-w1` | merge | Carries `cbe624d` |
+| `c6fb212` | `CLI telemetry: send sizes and error classes, not the script or its output` | telemetry | Inapplicable: the Rust fork has no telemetry sender or PostHog payload |
+| `120be96` | `Name OSError by its own name, not an alias` | telemetry | Inapplicable: the built-in exception label is used only in the absent Python telemetry payload |
+| `52da00d` | `Merge pull request #1076 from browser-use/fix/telemetry-no-content` | merge | Carries `c6fb212` and `120be96` |
+| `1012809` | `Release 0.1.15: version bump` | Python packaging | Inapplicable: the Rust workspace version and Cargo metadata remain authoritative |
+| `373aecc` | `Merge pull request #1077 from browser-use/release/0.1.15-telemetry` | merge | Final upstream `main` head; carries `1012809` |
+
+### Mapping Decisions
+
+| Upstream path | Destination | Decision |
+| --- | --- | --- |
+| `agent-workspace/domain-skills/camara-deputados/scraping.md` | `domains/camara-deputados/skill.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/geonet/scraping.md` | `domains/geonet/skill.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/kmb/scraping.md` | `domains/kmb/skill.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/statistics-denmark/scraping.md` | `domains/statistics-denmark/skill.md` | Migrated from final `upstream/main` content |
+| — | `domains/README.md` | Added the four sites to the synced-skills table and aligned the add/update guidance with canonical `domains/` imports |
+| Python telemetry, error labels, and package version | — | Inapplicable to the Rust-native runtime; no telemetry network path was added |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | — | Unchanged; the runtime delta contains no applicable behavior |
+
+- Normalization: trailing whitespace stripped and `^```python$` fences changed to `^```text$`. Every other byte matches final `upstream/main`. No `domain-skills/` or `agent-workspace/domain-skills/` mirrors were created for these sites.
+- Guest mapping: none added; the four guides contain no packaged guest workflow references.
+
+### Per-Site Notes
+
+- `camara-deputados`: reads the open API for recent PL bills, sorts by presentation date, follows vote pages to the latest nominal roll-call, prints party ties without a share, and includes the required source attribution.
+- `geonet`: uses one MMI 4+ `/quake` call capped at 100 results and marks a full list `PARTIAL`, lists every monitored volcano's alert level, and includes the CC BY 3.0 NZ and sponsor acknowledgement.
+- `kmb`: matches stops by route and direction, drops arrivals before the later of `generated_timestamp` and the current time, and falls back to per-stop calls when the bulk stop list is blocked.
+- `statistics-denmark`: reads table metadata first, requests the newest quarter across areas, and streams BULK data past the 1,000,000-cell CSV/JSON-stat limit.
+
+### Verification Evidence
+
+- Pre-run: `HEAD` == `origin/main` == `ab9bc12658638b5578d0058beec0f8cc112ffda4`; `upstream/main` == `373aecc4c40ef67d97b5ee69c144684a64a42a11`; `git status --short` showed only ` M AGENTS.md`, the pre-existing out-of-scope edit.
+- Remote fetches: `git fetch upstream main --prune` and `git fetch origin main --prune` both exited `0`; `git merge-base --is-ancestor origin/main HEAD` passed before migration.
+- Upstream analysis: `git rev-list --count 78dca53..373aecc` returned `11`; `--no-merges` returned `7`; `--merges` returned `4`. `git diff --name-status` listed four `A` domain files, one modified `pyproject.toml`, and three modified Python runtime files. `git diff --stat` reported `8 files changed, 3217 insertions(+), 40 deletions(-)`.
+- Fidelity: for all four sites, the normalized `git show upstream/main:agent-workspace/domain-skills/<site>/scraping.md` transform diffed clean against `domains/<site>/skill.md` (exit `0`). Line counts were `camara-deputados=997`, `geonet=748`, `kmb=725`, and `statistics-denmark=713`; each canonical file had zero trailing-whitespace matches and zero `^```python$` fences.
+- `cargo fmt --manifest-path rust/Cargo.toml --all -- --check`: passed (exit `0`).
+- `cargo check --manifest-path rust/Cargo.toml --workspace`: passed (exit `0`); the first run compiled `23` crates and finished in `18.79s`, and the confirmation run finished in `0.27s`.
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace`: passed (exit `0`), `217` tests passed and `0` failed.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin bhrun -- summary`: passed (exit `0`) with `execution_model=PersistentRunner` and `operations=42`.
+- `env -u CFLAGS -u CC cargo run --quiet --manifest-path rust/Cargo.toml --bin browser-harness -- --help`: passed (exit `0`) and printed the admin and runner command surfaces.
+- `git diff --check`: exit `2` with only `AGENTS.md:344: new blank line at EOF.` from the pre-existing edit; `git diff --check -- . ':(exclude)AGENTS.md'`: passed (exit `0`).
+- Sensitive scan: the repository scanner requires Bash 4 and ripgrep, so the maintained equivalent was used: `python3 "$HOME/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py"` passed (exit `0`) with `No obvious secrets or local path leaks found in 421 tracked/unignored files.`
+- `AGENTS.md`: left unmodified, unstaged, and untouched by this run.
 
 ## Daily Sync — 2026-11-21
 
