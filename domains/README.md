@@ -31,7 +31,8 @@ Rules:
   `fdic-bankfind`, and `nyc-open-data`, plus `cisa-kev`,
   `cleveland-museum`, `library-of-congress`, and `noaa-space-weather`, plus
   `crates-io`, `data-gov-sg`, `rubygems`, and `statistics-norway`, plus
-  `entur`, `geo-admin-ch`, `smhi`, and `ted-tenders`) also keep verbatim
+  `entur`, `geo-admin-ch`, `smhi`, and `ted-tenders`, plus `data-gov-my`,
+  `european-parliament`, `macrostrat`, and `worms`) also keep verbatim
   mirrors at `agent-workspace/domain-skills/<site>/scraping.md`.
 - Extra notes can live beside `skill.md` for task-specific flows.
 - Executable Rust guests still live under [`../rust/guests/`](../rust/guests/)
@@ -57,12 +58,14 @@ find domains -maxdepth 1 -type d | sort
 | `cleveland-museum` | Find CC0 artworks by artist or keyword with metadata, credit lines, and downloadable web/print images. |
 | `cpsc-recalls` | Check whether a product has a U.S. CPSC recall, with recall number, date, hazard, units, and remedy. |
 | `crates-io` | Look up a Rust crate's latest stable version, downloads, repository and dependents, or search crates by downloads. |
+| `data-gov-my` | Get Malaysian weekly pump prices with week-on-week changes, active MET Malaysia weather warnings, and 7-day town forecasts via api.data.gov.my. |
 | `data-gov-sg` | Get Singapore town forecasts, nearest temperature and rainfall readings, and regional PSI and PM2.5. |
 | `digitraffic` | Query Finnish traffic data, including road weather, cameras, train locations, and maritime notices. |
 | `endoflife-date` | Check whether a software version is still supported and when it reaches end of life via the endoflife.date API. |
 | `energi-data-service` | Query Danish DK1/DK2 day-ahead electricity prices and find the cheapest appliance windows. |
 | `entur` | Get next departures (line, destination, expected time, delay, platform) from a Norwegian stop by name, or plan a trip between two places. |
 | `epss` | Get the exploitation probability and percentile for a list of CVEs to decide which to patch first via the FIRST API. |
+| `european-parliament` | List European Parliament plenary vote items, tallies, outcomes, and linked adopted texts by sitting date, and look up current MEPs by country or political group. |
 | `faa-nas-status` | Check U.S. airports for active ground stops, ground-delay programs, closures, reasons, and delays in the FAA XML feed. |
 | `fdic-bankfind` | Check whether a bank is open and FDIC-insured, get its CERT number, assets and branches, or list recent bank failures. |
 | `gleif` | Find legal entities by name, inspect LEI status and registration data, and list reported direct subsidiaries. |
@@ -72,6 +75,7 @@ find domains -maxdepth 1 -type d | sort
 | `icd-10-cm` | Resolve condition descriptions to ICD-10-CM codes or look up a code's official name via NLM CTSS. |
 | `kmb` | Find a KMB stop by name and get the next bus arrivals in Hong Kong time. |
 | `library-of-congress` | Search digitized photos and maps by topic with titles, dates, image URLs, and rights notes via the JSON API. |
+| `macrostrat` | Look up the geologic map unit, age range, international period, lithology, and source map citation for a latitude/longitude point via Macrostrat. |
 | `medlineplus` | Get the plain-language MedlinePlus health-topic summary and page link for a condition. |
 | `noaa-space-weather` | Check current geomagnetic, solar radiation, and radio blackout levels, Kp forecasts, and active space-weather alerts. |
 | `npi-registry` | Verify U.S. clinicians and organizations by NPI, including taxonomy, practice address, and reported state licence. |
@@ -87,6 +91,7 @@ find domains -maxdepth 1 -type d | sort
 | `statistics-sweden` | Query Statistics Sweden PXWeb tables for official Swedish statistical series. |
 | `ted-tenders` | Find open EU public tenders by keyword, CPV code or buyer country, with title, buyer, country, submission deadline and notice link. |
 | `usgs-elevation` | Look up ground elevation for a latitude/longitude point via the USGS Elevation Point Query Service. |
+| `worms` | Resolve marine species names to accepted WoRMS names, AphiaIDs, full classifications, common names, distributions, synonyms, and citations. |
 
 When adding or updating a site, prefer `domains/<site>/` and avoid secrets,
 cookies, session tokens, task narration, and raw pixel coordinates.

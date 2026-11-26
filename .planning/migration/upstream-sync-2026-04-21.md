@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `373aecc4c40ef67d97b5ee69c144684a64a42a11`
-- Commit range: `78dca5346138ab2bebd372308eeaeba6788f14cc..373aecc4c40ef67d97b5ee69c144684a64a42a11`
-- Count: 11 commits (7 non-merge, 4 merge)
+- Upstream target commit: `54f4921b39aa839af55f49bbbd2a823526a80613`
+- Commit range: `373aecc4c40ef67d97b5ee69c144684a64a42a11..54f4921b39aa839af55f49bbbd2a823526a80613`
+- Count: 9 commits (6 non-merge, 3 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -23,7 +23,7 @@
 - Updated controlled-tab marker to 🐴 and fixed marker removal.
 - Preserved target attachment status for `current_tab` and `set_session` flows.
 - Added remote-specific CDP handshake messaging for cloud websocket failures.
-- Latest sync (`78dca53..373aecc`, 2026-11-26): four domain skills imported; the Python telemetry hardening and package version bump are inapplicable to the Rust-native runtime.
+- Latest sync (`373aecc..54f4921`, 2026-11-27): four domain skills imported (`data-gov-my`, `european-parliament`, `macrostrat`, `worms`); no Python or Rust runtime behavior changed.
 
 ## Migrated Helper/API Surface
 
@@ -1629,4 +1629,64 @@
   - `browser-harness doctor`: exit 0 (`{"daemon":{"alive":false,"browserKind":"local","name":"default"},"healthy":false,"schemaVersion":1}`).
 - `git diff --check`: reported only `AGENTS.md:344: new blank line at EOF.` (exit 2, pre-existing); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
 - Sensitive scan: `./scripts/scan_sensitive.sh` exited `127` with `mapfile: command not found` under macOS `/bin/bash` 3.2. Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: `No obvious secrets or local path leaks found in 393 tracked/unignored files.` (exit 0).
+- `AGENTS.md`: left unmodified, unstaged, and unstashed by this run.
+
+## Daily Sync — 2026-11-27
+
+- Run date: `2026-11-27`.
+- Previous target: `373aecc4c40ef67d97b5ee69c144684a64a42a11`; new target: `54f4921b39aa839af55f49bbbd2a823526a80613`.
+- Analysed range: `373aecc4c40ef67d97b5ee69c144684a64a42a11..54f4921b39aa839af55f49bbbd2a823526a80613` (`9` total: `6` non-merge, `3` merge).
+- Upstream net diff: `4` new files only, `3477` insertions (`agent-workspace/domain-skills/{data-gov-my,european-parliament,macrostrat,worms}/scraping.md`). The Rust runtime, tests, installer, and public CLI surfaces are unchanged.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `dbf4224` | `domain-skills: add european-parliament, data-gov-my, worms, macrostrat` | domains | Migrated all four sites to `domains/<site>/skill.md` and legacy mirrors `agent-workspace/domain-skills/<site>/scraping.md`, folded with the review fixes below |
+| `f09583b` | `domain-skills: review fixes for the 2026-11-25 batch (#1078)` | domains | Folded into final per-site content |
+| `9b74094` | `domain-skills: worms exact lookup batches by URL size (#1078)` | domains | Folded into final `worms` content |
+| `b80fc9e` | `Merge pull request #1078 from browser-use/domain-skills/aeo-2026-11-25` | merge | Carries `dbf4224`, `f09583b`, and `9b74094` |
+| `630f54e` | `worms: title fits a phone screen` | domains | Folded into final `worms` heading |
+| `f5be6f0` | `Merge pull request #1080 from browser-use/skills/aeo-1125-w1` | merge | Carries `630f54e` |
+| `cd52201` | `data-gov-my, worms: block 4 retry fixes from the website sync review` | domains | Folded into final `data-gov-my` and `worms` block 4 examples |
+| `fc09881` | `data-gov-my, worms: temp files from mktemp` | domains | Folded into final `data-gov-my` and `worms` block 4 examples |
+| `54f4921` | `Merge pull request #1081 from browser-use/skills/aeo-1125-w2` | merge | Final upstream `main` head; carries `cd52201` and `fc09881` |
+
+### Mapping Decisions
+
+| Upstream path | Destination | Decision |
+| --- | --- | --- |
+| `agent-workspace/domain-skills/data-gov-my/scraping.md` | `domains/data-gov-my/skill.md` + legacy mirror `agent-workspace/domain-skills/data-gov-my/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/european-parliament/scraping.md` | `domains/european-parliament/skill.md` + legacy mirror `agent-workspace/domain-skills/european-parliament/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/macrostrat/scraping.md` | `domains/macrostrat/skill.md` + legacy mirror `agent-workspace/domain-skills/macrostrat/scraping.md` | Migrated from final `upstream/main` content |
+| `agent-workspace/domain-skills/worms/scraping.md` | `domains/worms/skill.md` + legacy mirror `agent-workspace/domain-skills/worms/scraping.md` | Migrated from final `upstream/main` content |
+| — | `domains/README.md` | Added the four sites to the legacy-mirror prose and the alphabetical synced-skills table |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | — | Unchanged; the upstream range is domain knowledge only |
+
+- Normalization for every domain-skill file (both paths): `^```python$` fences become `^```text$`, and trailing whitespace is stripped. Every other byte matches final `upstream/main`. Each `domains/<site>/skill.md` is byte-identical to its legacy mirror.
+
+### Per-Site Notes
+
+- `data-gov-my`: queries `api.data.gov.my` for weekly pump prices, MET Malaysia weather warnings, and 7-day town forecasts; block 1 URL-encodes town names and prints one forecast per matched town id; block 4 uses `--retry-delay 16`, `--retry-max-time 120`, and `mktemp` temporary files for headers and discarded output under the 4-requests-per-minute per-API limit.
+- `european-parliament`: queries Open Data API v2 (JSON-LD) for plenary vote items, decisions, adopted texts (`TA-10-YYYY-NNNN`), and current MEPs; blocks 1 and 3 print source API URLs for attribution, and block 4 paginates vote items and adopted texts with same-day fallback handling for missing `activity_order`, missing `decision_outcome`, and `mul` labels.
+- `macrostrat`: queries `macrostrat.org/api/v2/mobile/map_query` and `/defs/intervals` for geologic map unit details, age ranges, international periods, lithology, and source map citations; blocks 1 and 3 honour `Retry-After` up to 120 s before the single retry on `429/500/502/503/504`, and `--z` accepts zoom levels `0-24`.
+- `worms`: queries `marinespecies.org/rest` for exact and fuzzy TAXAMATCH marine species lookups, accepted `valid_AphiaID` records, classifications, vernaculars, distributions, and synonyms; uses the shortened `marinespecies.org/rest` heading, caps exact GET batches at 6,000 bytes of names per URL alongside the 500/50 count caps, rejects wrong-length result lists or empty HTTP 200 bodies, and uses `--retry-max-time 120` with `mktemp` discard files in block 4.
+
+### Verification Evidence
+
+- Pre-run: `HEAD` == `origin/main` == `e2fea113a29ee594092bab4924a86dcc3821e9c6`; `upstream/main` == `54f4921b39aa839af55f49bbbd2a823526a80613`; `git status --porcelain` showed only ` M AGENTS.md`, the pre-existing out-of-scope edit.
+- Remote ancestry: `git fetch origin main --prune`, `git fetch upstream main --prune`, and `git merge-base --is-ancestor origin/main HEAD` passed before migration.
+- Upstream analysis: `git rev-list --count 373aecc..upstream/main` returned `9`; `--no-merges` returned `6`; `git diff --name-status` listed four additions under `agent-workspace/domain-skills/` (`3477` insertions) and zero Rust or runtime changes.
+- Fidelity: for all four sites (`data-gov-my=755`, `european-parliament=1053`, `macrostrat=881`, `worms=788` lines), normalized `git show upstream/main:agent-workspace/domain-skills/<site>/scraping.md` matched `domains/<site>/skill.md`; `diff domains/<site>/skill.md agent-workspace/domain-skills/<site>/scraping.md` was empty; zero residual `^```python$` fences and zero trailing-whitespace matches remained.
+- `cargo fmt --all --manifest-path rust/Cargo.toml -- --check`: passed (exit 0).
+- `cargo check --manifest-path rust/Cargo.toml --workspace`: passed (exit 0, `8.32s`).
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace`: passed (exit 0), `217 passed`, `0 failed`.
+- `env -u CFLAGS -u CC cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0, `1.04s`).
+- CLI smoke on built binaries (`rust/target/debug/*`):
+  - `browser-harness --help`: exit 0 (admin and runner command surface printed).
+  - `browser-harness summary`: exit 0 (`execution_model=PersistentRunner ... operations=42`).
+  - `bhrun summary`: exit 0 (same summary output).
+  - `browser-harness doctor`: exit 0 (`{"daemon":{"alive":false,"browserKind":"local","name":"default"},"healthy":false,"schemaVersion":1}`).
+- `git diff --check`: reported only `AGENTS.md:344: new blank line at EOF.` (exit 2, pre-existing); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
+- Sensitive scan: `./scripts/scan_sensitive.sh` exited `127` with `mapfile: command not found` under macOS `/bin/bash` 3.2. Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: `No obvious secrets or local path leaks found in 429 tracked/unignored files.` (exit 0).
 - `AGENTS.md`: left unmodified, unstaged, and unstashed by this run.
