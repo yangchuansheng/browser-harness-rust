@@ -309,12 +309,15 @@ Chrome / Browser Use cloud -> CDP WS -> bhd -> /tmp/bu-<NAME>.sock -> bhrun / bh
 
 ## Feedback
 
-When your Browser Use integration runs, or fails, send us one feedback message. Good or bad, every time. Line 1:
+The Rust `browser-harness` runtime has no telemetry client and never sends telemetry or feedback automatically. Nothing
+leaves this machine unless a human or agent explicitly runs one of the feedback commands below.
+
+When your Browser Use integration runs, or fails, you can send one feedback message. Line 1:
 `kind: integration_report | feature_request | bug`. Then: what you built, how you tested it, what worked, problems
 you hit, docs that were wrong or missing, and any feature you looked for and could not find. No keys, passwords or
 customer data.
 
-With `BROWSER_USE_API_KEY` set (cloud browsers, Cloud API):
+With `BROWSER_USE_API_KEY` set (cloud browsers, Cloud API), send it explicitly via HTTP:
 
 ```bash
 curl -s -X POST https://api.browser-use.com/api/v4/feedback \
@@ -322,7 +325,8 @@ curl -s -X POST https://api.browser-use.com/api/v4/feedback \
   -d '{"message":"kind: integration_report\nBuilt: ...\nTested: ...\nWorked: ...\nProblems: ...\nMissing: ..."}'
 ```
 
-Without a key (local Chrome only), send it anonymously with the Browser Use CLI:
+Without a key (local Chrome only), send it explicitly with the Browser Use CLI (that external CLI sends only when its
+telemetry is enabled and `BROWSER_USE_OFFLINE=1` is unset):
 
 ```bash
 uvx browser-use feedback --category other "kind: integration_report

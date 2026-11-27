@@ -4,9 +4,9 @@
 
 - Upstream repository: `https://github.com/browser-use/browser-harness`
 - Baseline commit before requested date: `2d23211d346c7a12bdb2ce03e49b2d955f4769b2`
-- Upstream target commit: `54f4921b39aa839af55f49bbbd2a823526a80613`
-- Commit range: `373aecc4c40ef67d97b5ee69c144684a64a42a11..54f4921b39aa839af55f49bbbd2a823526a80613`
-- Count: 9 commits (6 non-merge, 3 merge)
+- Upstream target commit: `76f1459c4d259d3d7a29bc23eee307a2c4895391`
+- Commit range: `54f4921b39aa839af55f49bbbd2a823526a80613..76f1459c4d259d3d7a29bc23eee307a2c4895391`
+- Count: 3 commits (2 non-merge, 1 merge)
 - User intent: replicate all upstream updates since Apr 21, 2026 into this Rust fork while preserving the Rust architecture.
 
 ## Migrated Runtime Behavior
@@ -23,7 +23,7 @@
 - Updated controlled-tab marker to 🐴 and fixed marker removal.
 - Preserved target attachment status for `current_tab` and `set_session` flows.
 - Added remote-specific CDP handshake messaging for cloud websocket failures.
-- Latest sync (`373aecc..54f4921`, 2026-11-27): four domain skills imported (`data-gov-my`, `european-parliament`, `macrostrat`, `worms`); no Python or Rust runtime behavior changed.
+- Latest sync (`54f4921..76f1459`, 2026-11-28): audited upstream telemetry privacy and feedback opt-out changes (`cdp_kind` instead of raw CDP hostname; feedback gated on telemetry opt-out) as not applicable to the Rust runtime (no Rust telemetry client, `feedback` command, or MCP `browser_feedback` tool); updated `SKILL.md` feedback privacy prose and recorded the forward-looking `cdp_kind` rule.
 
 ## Migrated Helper/API Surface
 
@@ -46,6 +46,7 @@
   interaction skills for upstream connection and helper guidance.
 - Linked the upstream Browser Use Box deployment demo in `README.md`.
 - Updated upload and WASM guest docs for remote-browser staging behavior.
+- Updated `SKILL.md` `## Feedback` prose to state the Rust runtime's zero-automatic-telemetry behavior and explicit invocation of `curl` / `uvx browser-use feedback`.
 
 ## Adapted Instead of Copied
 
@@ -1690,3 +1691,56 @@
 - `git diff --check`: reported only `AGENTS.md:344: new blank line at EOF.` (exit 2, pre-existing); `git diff --check -- . ':(exclude)AGENTS.md'` passed (exit 0).
 - Sensitive scan: `./scripts/scan_sensitive.sh` exited `127` with `mapfile: command not found` under macOS `/bin/bash` 3.2. Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: `No obvious secrets or local path leaks found in 429 tracked/unignored files.` (exit 0).
 - `AGENTS.md`: left unmodified, unstaged, and unstashed by this run.
+
+## Daily Sync — 2026-11-28
+
+- Run date: `2026-11-28`.
+- Previous target: `54f4921b39aa839af55f49bbbd2a823526a80613`; new target: `76f1459c4d259d3d7a29bc23eee307a2c4895391`.
+- Analysed range: `54f4921b39aa839af55f49bbbd2a823526a80613..76f1459c4d259d3d7a29bc23eee307a2c4895391` (`3` total: `2` non-merge, `1` merge).
+- Upstream net diff: `9` files changed, `+167` insertions / `-58` deletions (`CHANGELOG.md`, `SKILL.md`, `docs/MCP.md`, `src/browser_harness/report.py`, `src/browser_harness/telemetry.py`, `src/mcp_server.py`, `tests/unit/test_mcp_server.py`, `tests/unit/test_report.py`, `tests/unit/test_telemetry.py`). Zero `agent-workspace/domain-skills/**` files changed in this range.
+
+### Commits Analyzed
+
+| Commit | Summary | Area | Action |
+| --- | --- | --- | --- |
+| `c3a8052` | `telemetry: send cdp_kind instead of the CDP hostname; feedback respects the opt-out` | telemetry, report, mcp, docs, tests | Audited all Python telemetry/feedback/MCP changes as not applicable to Rust; adapted `SKILL.md` `## Feedback` privacy prose for the Rust runtime and recorded forward-looking `cdp_kind` invariant |
+| `5b95410` | `telemetry: 0.0.0.0 counts as local; SKILL.md names the offline message too (review)` | telemetry, docs, tests | Reflected `BROWSER_USE_OFFLINE=1` note for the external `uvx browser-use feedback` command in `SKILL.md`; recorded `0.0.0.0`/`::` as `local` in the forward-looking `cdp_kind` rule |
+| `76f1459` | `Merge pull request #1083 from browser-use/fix/telemetry-no-hostname` | merge | Final upstream `main` head; carries `c3a8052` and `5b95410` |
+
+### Applicability and Mapping Decisions
+
+| Upstream path | Destination | Decision |
+| --- | --- | --- |
+| `SKILL.md` | `SKILL.md` (`## Feedback`) | Adapted: states truthfully that the Rust runtime has no telemetry client and never sends telemetry or feedback automatically; feedback leaves the machine only when explicitly invoking the documented `curl` or `uvx browser-use feedback` command (with the external Browser Use CLI honoring its own telemetry opt-out and `BROWSER_USE_OFFLINE=1`). Kept existing command examples without claiming an unimplemented Rust telemetry toggle. |
+| `docs/MCP.md` | — | Not applicable: Rust `browser-harness-mcp` (`rust/bins/browser-harness-mcp/src/main.rs`) only proxies the 18 CLI browser commands and exposes neither `browser_feedback` nor `browser_report_run`. |
+| `CHANGELOG.md` | — | Not applicable: upstream `## Unreleased` entries describe Python `cli_event` (`cdp_kind`) and Python `feedback` opt-out; left root `CHANGELOG.md` accurate for the Rust-only distribution. |
+| `src/browser_harness/telemetry.py` | — | Not applicable: no Rust telemetry client (`posthog`, `install_id`, `capture_cli_event`, `_cdp_kind`, `_env_disabled_by`) exists in `rust/`. Forward-looking rule recorded below. |
+| `src/browser_harness/report.py` | — | Not applicable: no Rust telemetry client, `report_issue()`/`report_run()`, or `browser-harness feedback` CLI subcommand exists in `rust/`. |
+| `src/mcp_server.py` | — | Not applicable: Python MCP server tool description for `browser_feedback`; no Rust MCP equivalent. |
+| `tests/unit/test_telemetry.py` | — | Not applicable: Python unit tests for `_cdp_kind` and `capture_cli_event`. |
+| `tests/unit/test_report.py` | — | Not applicable: Python unit tests for `report.py` telemetry opt-out gating. |
+| `tests/unit/test_mcp_server.py` | — | Not applicable: Python unit tests for Python MCP `browser_feedback` / `browser_report_run`. |
+| Rust crate and binary runtime (`rust/crates/*`, `rust/bins/*`) | — | Unchanged; verified `grep -rinE "telemetry|posthog|install_id|capture_cli|browser_feedback|feedback" rust/` returned zero matches. `BU_CDP_WS`/`BU_CDP_URL` remain local/remote discovery inputs in `bh-discovery`, `bh-daemon`, `bh-cdp`, and `bhctl`. |
+
+### Forward-Looking Privacy Invariant
+
+- If any future Rust telemetry subsystem is ever introduced, `BU_CDP_WS` / `BU_CDP_URL` must only be classified into a `cdp_kind` enum (`local` for `localhost`, `*.localhost`, loopback IPs, and unspecified `0.0.0.0`/`::`; `cloud` for `browser-use.com` and `*.browser-use.com`; `remote` otherwise) — never transmitting a raw hostname, IP address, or port. Any future built-in feedback or run-report path must respect the same telemetry opt-out switches and send nothing when opted out or offline.
+
+### Verification Evidence
+
+- Pre-run: `HEAD` == `origin/main` == `c06de2f94aaee653293945ec1afba59e66441bc9`; `upstream/main` == `76f1459c4d259d3d7a29bc23eee307a2c4895391`; `git status --short` showed only ` M AGENTS.md`, the pre-existing out-of-scope edit; untracked files list was empty.
+- Remote ancestry: `git fetch origin main --prune`, `git fetch upstream main --prune`, and `git merge-base --is-ancestor origin/main HEAD` passed before migration.
+- Upstream analysis: `git rev-list --count 54f4921..upstream/main` returned `3` (`2` non-merge, `1` merge); `git diff --stat 54f4921..upstream/main` listed `9` files changed (`+167`/`-58`) and zero `agent-workspace/domain-skills/**` paths.
+- Rust audit check: `grep -rinE "telemetry|posthog|install_id|capture_cli|browser_feedback|feedback" rust/` returned no matches; `rust/bins/browser-harness-mcp/src/main.rs` confirmed to expose only CLI-proxied browser tools.
+- `cargo fmt --all --manifest-path rust/Cargo.toml -- --check`: passed (exit 0).
+- `cargo check --manifest-path rust/Cargo.toml --workspace`: passed (exit 0, `9.57s`).
+- `env -u CFLAGS -u CC cargo test --manifest-path rust/Cargo.toml --workspace`: passed (exit 0), `217 passed`, `0 failed`, `0 ignored` across 20 test/doc-test suites (`12.59s`).
+- `env -u CFLAGS -u CC cargo build --workspace --manifest-path rust/Cargo.toml`: passed (exit 0, `1.18s`).
+- CLI smoke on built binaries (`rust/target/debug/*`):
+  - `browser-harness --help`: exit 0 (admin and runner command surface written to `/tmp/bh-help.txt`).
+  - `bhrun summary`: exit 0 (`execution_model=PersistentRunner ... operations=42`).
+  - `browser-harness summary`: exit 0 (`execution_model=PersistentRunner ... operations=42`).
+  - `browser-harness doctor`: exit 0 (`{"daemon":{"alive":false,"browserKind":"local","name":"default"},"healthy":false,"schemaVersion":1}`).
+- `git diff --check -- . ':(exclude)AGENTS.md'`: passed (exit 0); plain `git diff --check` reports only the pre-existing `AGENTS.md` blank-line-at-EOF complaint.
+- Sensitive scan: `./scripts/scan_sensitive.sh` exited `127` with `mapfile: command not found` under macOS `/bin/bash` 3.2. Substituted `python3 ~/.hermes/skills/autonomous-ai-agents/autonomous-coding-agents/scripts/scan_sensitive_fallback.py`: `No obvious secrets or local path leaks found in 429 tracked/unignored files.` (exit 0).
+- `AGENTS.md`: left unmodified, unstaged, and untouched by this run.
